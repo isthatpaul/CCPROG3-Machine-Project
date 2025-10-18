@@ -57,8 +57,27 @@ public class Reservation
         return totalPrice;
     }
 
-    public double[] getPriceBreakdown(int day) // im confused with what to do here
+    public double getPriceBreakdown(int day) // im confused with what to do here
     {
+        if (day < 1 || day > 30)
+        {
+            return 0.0;
+        }
+        return priceBreakdown[day - 1];
+    }
 
+    public double[] getAllPriceBreakdown()
+    {
+        return priceBreakdown;
+    }
+
+    public int getNumberOfNights()
+    {
+        int nights = checkOutDay - checkInDay;
+        if (nights < 0)
+        {
+            nights = 0;
+        }
+        return nights;
     }
 }
