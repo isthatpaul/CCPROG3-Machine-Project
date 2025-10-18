@@ -135,7 +135,7 @@ public class Property
             }
         }
 
-        // reate Reservation
+        // Create Reservation
         Reservation newRes = new Reservation(guestName, checkIn, checkOut, basePrice);
         reservations.add(newRes);
 
