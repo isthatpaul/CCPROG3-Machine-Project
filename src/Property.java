@@ -26,9 +26,7 @@ public class Property
     /** List of all reservations made for this property. */
     private List<Reservation> reservations;
 
-    // ------------------------------------------------------------
     // CONSTRUCTOR
-    // ------------------------------------------------------------
 
     /**
      * Constructs a {@code Property} with a fixed 30-day calendar.
@@ -49,9 +47,7 @@ public class Property
         }
     }
 
-    // ------------------------------------------------------------
     // GETTERS
-    // ------------------------------------------------------------
 
     /**
      * Returns the property’s name.
@@ -83,9 +79,7 @@ public class Property
         return reservations;
     }
 
-    // ------------------------------------------------------------
     // CORE FUNCTIONALITY
-    // ------------------------------------------------------------
 
     /**
      * Attempts to create and add a new reservation for this property.
@@ -104,7 +98,7 @@ public class Property
      */
     public boolean addReservation(String guestName, int checkIn, int checkOut)
     {
-        // Invalid boundary days
+        // Invalid days
         if (checkOut == 1)
         {
             System.out.println("Invalid: Cannot check out on Day 1.");
@@ -116,20 +110,21 @@ public class Property
             return false;
         }
 
-        // Validation ===
+        // Validations
         if (checkIn < 1 || checkOut > 30 || checkIn >= checkOut)
         {
-            System.out.println("Invalid day for reservation.");
+            System.out.println("Invalid day range for reservation.");
             return false;
         }
 
         // Check for overlapping reservations
-        for (Reservation r : reservations)
+        for (int i = 0; i < reservations.size(); i++)
         {
+            Reservation r = reservations.get(i);
             int existingIn = r.getCheckInDay();
             int existingOut = r.getCheckOutDay();
 
-            // Overlap only if date ranges intersect
+            // Clarification #3: Overlap only if date ranges intersect
             boolean overlap = (checkIn < existingOut) && (checkOut > existingIn);
 
             if (overlap)
@@ -140,22 +135,24 @@ public class Property
             }
         }
 
+        // reate Reservation
         Reservation newRes = new Reservation(guestName, checkIn, checkOut, basePrice);
         reservations.add(newRes);
 
-        // Mark booked days on calendar
+        // Mark booked days on the calendar
         for (int d = checkIn; d < checkOut; d++)
         {
-            dates.get(d - 1).book(newRes);
+            DateSlot slot = dates.get(d - 1);
+            slot.book(newRes);
         }
 
-        System.out.println("Reservation confirmed for " + guestName + " (Days " + checkIn + "–" + checkOut + ")");
+        System.out.println("Reservation confirmed for " + guestName +
+                " (Days " + checkIn + "–" + checkOut + ")");
         return true;
     }
 
-    // ------------------------------------------------------------
+
     // DISPLAY METHODS
-    // ------------------------------------------------------------
 
     /**
      * Displays all 30 days of this property’s booking calendar.
