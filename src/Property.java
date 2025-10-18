@@ -1,41 +1,200 @@
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * The {@code Property} class represents a rental property in the
+ * Green Property system for MCO1.
+ * <p>
+ * Each property maintains:
+ * <ul>
+ *     <li>A 30-day booking calendar represented by {@link DateSlot} objects</li>
+ *     <li>A list of {@link Reservation} records</li>
+ *     <li>A base price per night for all reservations</li>
+ * </ul>
+ *
+ * <p><b>Complies with MCO1 Requirements and Clarifications:</b></p>
+ * <ol>
+ *     <li>Calendar fixed to 30 days</li>
+ *     <li>No check-out on Day&nbsp;1 and no check-in on Day&nbsp;30</li>
+ *     <li>Allows check-in on the same day another booking checks out</li>
+ * </ol>
+ *
+ * This class demonstrates proper object-oriented concepts such as
+ * encapsulation, composition, and information hiding.
+ *
+ * @author Crisologo, Lim Un
+ * @version 4.0
+ */
 public class Property
 {
-    private String name;
+    /** The name of the property. */
+    private String propertyName;
+    /** The base price per night for this property. */
     private double basePrice;
-    private final List<DateSlot> dates;
-    private final List<Reservation> reservations;
+    /** List of 30 DateSlot objects representing the booking calendar. */
+    private List<DateSlot> dates;
+    /** List of all reservations made for this property. */
+    private List<Reservation> reservations;
 
-    public static final double DEFAULT_BASE_PRICE = 1500.0;
-    public static final double MIN_BASE_PRICE = 100.0;
+    // ------------------------------------------------------------
+    // CONSTRUCTOR
+    // ------------------------------------------------------------
 
-    public Property(String name, int numDates)
+    /**
+     * Constructs a {@code Property} with a fixed 30-day calendar.
+     *
+     * @param name       The name of the property
+     * @param basePrice  The nightly base price for reservations
+     */
+    public Property(String name, double basePrice)
     {
-        if (name == null)
-            name = "";
-        this.name = name;
-        this.basePrice = DEFAULT_BASE_PRICE;
-        this.dates = new ArrayList<>();
-        int safeNum = Math.max(1, Math.min(numDates, 30));
-        for (int i = 1; i <= safeNum; i++)
-        {
-            dates.add(new DateSlot(i, basePrice));
+        this.propertyName = name;
+        this.basePrice = basePrice;
+        this.dates = new ArrayList<DateSlot>();
+        this.reservations = new ArrayList<Reservation>();
+
+        // Initialize 30-day calendar
+        for (int day = 1; day <= 30; day++) {
+            dates.add(new DateSlot(day, basePrice));
         }
-        this.reservations = new ArrayList<>();
     }
 
-    public String getName()
+    // ------------------------------------------------------------
+    // GETTERS
+    // ------------------------------------------------------------
+
+    /**
+     * Returns the property’s name.
+     *
+     * @return The property name
+     */
+    public String getPropertyName()
     {
-        return name;
+        return propertyName;
     }
 
-    public boolean setName(String newName)
+    /**
+     * Returns the list of {@link DateSlot} objects representing the property’s calendar.
+     *
+     * @return The list of 30 DateSlot entries
+     */
+    public List<DateSlot> getDates()
     {
-        if (newName == null || newName.isBlank())
+        return dates;
+    }
+
+    /**
+     * Returns all reservations made for this property.
+     *
+     * @return The list of Reservation objects
+     */
+    public List<Reservation> getReservations()
+    {
+        return reservations;
+    }
+
+    // ------------------------------------------------------------
+    // CORE FUNCTIONALITY
+    // ------------------------------------------------------------
+
+    /**
+     * Attempts to create and add a new reservation for this property.
+     * <p>
+     * This method enforces all MCO1 Clarifications:
+     * <ul>
+     *     <li>Prevents check-out on Day 1</li>
+     *     <li>Prevents check-in on Day 30</li>
+     *     <li>Rejects overlapping reservations, but allows back-to-back bookings</li>
+     * </ul>
+     *
+     * @param guestName The guest making the reservation
+     * @param checkIn   The check-in day (1–30)
+     * @param checkOut  The check-out day (1–30)
+     * @return {@code true} if the reservation was successfully created; {@code false} otherwise
+     */
+    public boolean addReservation(String guestName, int checkIn, int checkOut)
+    {
+        // Invalid boundary days
+        if (checkOut == 1)
+        {
+            System.out.println("Invalid: Cannot check out on Day 1.");
             return false;
-        this.name = newName;
+        }
+        if (checkIn == 30)
+        {
+            System.out.println("Invalid: Cannot check in on Day 30.");
+            return false;
+        }
+
+        // Validation ===
+        if (checkIn < 1 || checkOut > 30 || checkIn >= checkOut)
+        {
+            System.out.println("Invalid day for reservation.");
+            return false;
+        }
+
+        // Check for overlapping reservations
+        for (Reservation r : reservations)
+        {
+            int existingIn = r.getCheckInDay();
+            int existingOut = r.getCheckOutDay();
+
+            // Overlap only if date ranges intersect
+            boolean overlap = (checkIn < existingOut) && (checkOut > existingIn);
+
+            if (overlap)
+            {
+                System.out.println("Conflict: Overlaps with another reservation (" +
+                        r.getGuestName() + " " + existingIn + "–" + existingOut + ").");
+                return false;
+            }
+        }
+
+        Reservation newRes = new Reservation(guestName, checkIn, checkOut, basePrice);
+        reservations.add(newRes);
+
+        // Mark booked days on calendar
+        for (int d = checkIn; d < checkOut; d++)
+        {
+            dates.get(d - 1).book(newRes);
+        }
+
+        System.out.println("Reservation confirmed for " + guestName + " (Days " + checkIn + "–" + checkOut + ")");
         return true;
+    }
+
+    // ------------------------------------------------------------
+    // DISPLAY METHODS
+    // ------------------------------------------------------------
+
+    /**
+     * Displays all 30 days of this property’s booking calendar.
+     * Shows which days are booked and by which guest.
+     */
+    public void displayCalendar()
+    {
+        System.out.println("\n=== Calendar for " + propertyName + " ===");
+        for (DateSlot d : dates)
+        {
+            System.out.println(d);
+        }
+    }
+
+    /**
+     * Displays a list of all reservations recorded for this property.
+     * Prints guest names, check-in/out days, total price, and number of nights.
+     */
+    public void displayReservations()
+    {
+        System.out.println("\n=== Reservations for " + propertyName + " ===");
+        if (reservations.isEmpty())
+        {
+            System.out.println("No reservations yet.");
+        } else {
+            for (Reservation r : reservations)
+            {
+                System.out.println(r);
+            }
+        }
     }
 }
