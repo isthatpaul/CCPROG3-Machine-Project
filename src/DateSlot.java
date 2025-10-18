@@ -108,7 +108,6 @@ public class DateSlot
 
     // CORE FUNCTIONALITY
 
-
     /**
      * Attempts to book this day for a given reservation.
      * <p>
