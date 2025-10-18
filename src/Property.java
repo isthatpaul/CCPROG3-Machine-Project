@@ -124,7 +124,7 @@ public class Property
             int existingIn = r.getCheckInDay();
             int existingOut = r.getCheckOutDay();
 
-            // Clarification #3: Overlap only if date ranges intersect
+
             boolean overlap = (checkIn < existingOut) && (checkOut > existingIn);
 
             if (overlap)
