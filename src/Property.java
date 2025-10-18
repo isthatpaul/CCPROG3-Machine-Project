@@ -12,16 +12,6 @@ import java.util.List;
  *     <li>A base price per night for all reservations</li>
  * </ul>
  *
- * <p><b>Complies with MCO1 Requirements and Clarifications:</b></p>
- * <ol>
- *     <li>Calendar fixed to 30 days</li>
- *     <li>No check-out on Day&nbsp;1 and no check-in on Day&nbsp;30</li>
- *     <li>Allows check-in on the same day another booking checks out</li>
- * </ol>
- *
- * This class demonstrates proper object-oriented concepts such as
- * encapsulation, composition, and information hiding.
- *
  * @author Crisologo, Lim Un
  * @version 4.0
  */
