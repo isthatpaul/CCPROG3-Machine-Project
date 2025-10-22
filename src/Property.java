@@ -190,14 +190,14 @@ public class Property
      * @return {@code true} if the reservation was successfully removed;
      *         {@code false} if no matching reservation was found
      */
-    public boolean removeReservation(String guestName)
+    public boolean removeReservation(Reservation guestName)
     {
         Reservation target = null;
 
         for (int i = 0; i < reservations.size(); i++)
         {
             Reservation r = reservations.get(i);
-            if (r.getGuestName().equalsIgnoreCase(guestName))
+            if (r.getGuestName().equalsIgnoreCase(String.valueOf(guestName)))
             {
                 target = r;
                 break;
