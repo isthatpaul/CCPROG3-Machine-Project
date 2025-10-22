@@ -184,4 +184,110 @@ public class Property
             }
         }
     }
+
+    public boolean updateBasePrice(double newPrice)
+    {
+        if (newPrice < 100.0 || !reservations.isEmpty())
+        {
+            return false;
+        }
+        this.basePrice = newPrice;
+        for (DateSlot slot : dates)
+        {
+            slot.setPricePerNight(newPrice);
+        }
+        return true;
+    }
+
+
+    public void renameProperty(String newName)
+    {
+        this.propertyName = newName;
+    }
+
+
+    public boolean removeReservation(String guestName)
+    {
+        Reservation target = null;
+        for (Reservation r : reservations)
+        {
+            if (r.getGuestName().equalsIgnoreCase(guestName))
+            {
+                target = r;
+                break;
+            }
+        }
+        if (target == null)
+        {
+            return false;
+        }
+        for (int d = target.getCheckInDay(); d < target.getCheckOutDay(); d++)
+        {
+            dates.get(d - 1).cancelBooking();
+        }
+        reservations.remove(target);
+        return true;
+    }
+
+    public boolean canBeRemoved()
+    {
+        return reservations.isEmpty();
+    }
+
+    public int countAvailableDates()
+    {
+        int count = 0;
+        for (DateSlot d : dates)
+        {
+            if (d.isAvailable())
+            {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    public double getTotalEarnings()
+    {
+        double total = 0;
+        for (Reservation r : reservations)
+        {
+            total += r.getTotalPrice();
+        }
+        return total;
+    }
+
+    public void getDateInfo(int day)
+    {
+        if (day < 1 || day > 30)
+        {
+            System.out.println("Invalid day.");
+            return;
+        }
+        DateSlot slot = dates.get(day - 1);
+        System.out.println("Day " + day + ": PHP " + slot.getPricePerNight() + " - " + (slot.isBooked() ? "BOOKED" : "AVAILABLE"));
+    }
+
+
+    public void getRangeSummary(int start, int end)
+    {
+        if (start < 1 || end > 30 || start > end)
+        {
+            System.out.println("Invalid range.");
+            return;
+        }
+        int available = 0;
+        int booked = 0;
+        for (int i = start - 1; i < end; i++)
+        {
+            if (dates.get(i).isAvailable())
+            {
+                available++;
+            } else {
+                booked++;
+            }
+        }
+        System.out.println("Range " + start + "–" + end + ": " + available + " available, " + booked + " booked.");
+    }
+
 }
