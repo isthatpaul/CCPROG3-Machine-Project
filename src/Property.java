@@ -12,27 +12,23 @@ import java.util.List;
  *     <li>A base price per night for all reservations</li>
  * </ul>
  *
- * @author Crisologo, Lim Un
- * @version 4.0
+ * @author
+ *     Crisologo, Lim Un
+ * @version
+ *     4.2
  */
 public class Property
 {
-    /** The name of the property. */
     private String propertyName;
-    /** The base price per night for this property. */
     private double basePrice;
-    /** List of 30 DateSlot objects representing the booking calendar. */
     private List<DateSlot> dates;
-    /** List of all reservations made for this property. */
     private List<Reservation> reservations;
-
-    // CONSTRUCTOR
 
     /**
      * Constructs a {@code Property} with a fixed 30-day calendar.
      *
-     * @param name       The name of the property
-     * @param basePrice  The nightly base price for reservations
+     * @param name       the name of the property
+     * @param basePrice  the nightly base price for reservations
      */
     public Property(String name, double basePrice)
     {
@@ -41,18 +37,16 @@ public class Property
         this.dates = new ArrayList<DateSlot>();
         this.reservations = new ArrayList<Reservation>();
 
-        // Initialize 30-day calendar
-        for (int day = 1; day <= 30; day++) {
+        for (int day = 1; day <= 30; day++)
+        {
             dates.add(new DateSlot(day, basePrice));
         }
     }
 
-    // GETTERS
-
     /**
-     * Returns the property’s name.
+     * Returns the property name.
      *
-     * @return The property name
+     * @return the property's name
      */
     public String getPropertyName()
     {
@@ -60,9 +54,20 @@ public class Property
     }
 
     /**
-     * Returns the list of {@link DateSlot} objects representing the property’s calendar.
+     * Returns the base price per night.
      *
-     * @return The list of 30 DateSlot entries
+     * @return the base price per night
+     */
+    public double getBasePrice()
+    {
+        return basePrice;
+    }
+
+    /**
+     * Returns the list of all {@link DateSlot} objects representing
+     * the 30-day calendar.
+     *
+     * @return a list of {@code DateSlot} objects
      */
     public List<DateSlot> getDates()
     {
@@ -70,64 +75,52 @@ public class Property
     }
 
     /**
-     * Returns all reservations made for this property.
+     * Returns the list of all reservations for this property.
      *
-     * @return The list of Reservation objects
+     * @return a list of {@code Reservation} objects
      */
     public List<Reservation> getReservations()
     {
         return reservations;
     }
 
-    // CORE FUNCTIONALITY
-
     /**
-     * Attempts to create and add a new reservation for this property.
-     * <p>
-     * This method enforces all MCO1 Clarifications:
-     * <ul>
-     *     <li>Prevents check-out on Day 1</li>
-     *     <li>Prevents check-in on Day 30</li>
-     *     <li>Rejects overlapping reservations, but allows back-to-back bookings</li>
-     * </ul>
+     * Adds a new reservation if it does not conflict with existing ones
+     * and the given dates are valid.
      *
-     * @param guestName The guest making the reservation
-     * @param checkIn   The check-in day (1–30)
-     * @param checkOut  The check-out day (1–30)
-     * @return {@code true} if the reservation was successfully created; {@code false} otherwise
+     * @param guestName  the name of the guest making the reservation
+     * @param checkIn    the check-in day (1–30)
+     * @param checkOut   the check-out day (1–30)
+     * @return {@code true} if the reservation was successfully added;
+     *         {@code false} otherwise
      */
     public boolean addReservation(String guestName, int checkIn, int checkOut)
     {
-        // Invalid days
         if (checkOut == 1)
         {
             System.out.println("Invalid: Cannot check out on Day 1.");
             return false;
         }
+
         if (checkIn == 30)
         {
             System.out.println("Invalid: Cannot check in on Day 30.");
             return false;
         }
 
-        // Validations
         if (checkIn < 1 || checkOut > 30 || checkIn >= checkOut)
         {
             System.out.println("Invalid day range for reservation.");
             return false;
         }
 
-        // Check for overlapping reservations
         for (int i = 0; i < reservations.size(); i++)
         {
             Reservation r = reservations.get(i);
             int existingIn = r.getCheckInDay();
             int existingOut = r.getCheckOutDay();
 
-
-            boolean overlap = (checkIn < existingOut) && (checkOut > existingIn);
-
-            if (overlap)
+            if (checkIn < existingOut && checkOut > existingIn)
             {
                 System.out.println("Conflict: Overlaps with another reservation (" +
                         r.getGuestName() + " " + existingIn + "–" + existingOut + ").");
@@ -135,15 +128,12 @@ public class Property
             }
         }
 
-        // Create Reservation
         Reservation newRes = new Reservation(guestName, checkIn, checkOut, basePrice);
         reservations.add(newRes);
 
-        // Mark booked days on the calendar
         for (int d = checkIn; d < checkOut; d++)
         {
-            DateSlot slot = dates.get(d - 1);
-            slot.book(newRes);
+            dates.get(d - 1).book(newRes);
         }
 
         System.out.println("Reservation confirmed for " + guestName +
@@ -151,112 +141,140 @@ public class Property
         return true;
     }
 
-
-    // DISPLAY METHODS
-
     /**
-     * Displays all 30 days of this property’s booking calendar.
-     * Shows which days are booked and by which guest.
+     * Updates the base price per night for the property,
+     * provided there are no existing reservations.
+     *
+     * @param newPrice  the new base price (must be at least PHP 100.00)
+     * @return {@code true} if the update was successful; {@code false} otherwise
      */
-    public void displayCalendar()
-    {
-        System.out.println("\n=== Calendar for " + propertyName + " ===");
-        for (DateSlot d : dates)
-        {
-            System.out.println(d);
-        }
-    }
-
-    /**
-     * Displays a list of all reservations recorded for this property.
-     * Prints guest names, check-in/out days, total price, and number of nights.
-     */
-    public void displayReservations()
-    {
-        System.out.println("\n=== Reservations for " + propertyName + " ===");
-        if (reservations.isEmpty())
-        {
-            System.out.println("No reservations yet.");
-        } else {
-            for (Reservation r : reservations)
-            {
-                System.out.println(r);
-            }
-        }
-    }
-
     public boolean updateBasePrice(double newPrice)
     {
-        if (newPrice < 100.0 || !reservations.isEmpty())
+        if (newPrice < 100.0)
         {
+            System.out.println("Price must be at least PHP 100.00.");
             return false;
         }
-        this.basePrice = newPrice;
-        for (DateSlot slot : dates)
+
+        if (reservations.size() > 0)
         {
-            slot.setPricePerNight(newPrice);
+            System.out.println("Cannot update price: existing reservations present.");
+            return false;
         }
+
+        this.basePrice = newPrice;
+
+        for (int i = 0; i < dates.size(); i++)
+        {
+            dates.get(i).setPricePerNight(newPrice);
+        }
+
+        System.out.println("Base price updated to PHP " + newPrice);
         return true;
     }
 
-
+    /**
+     * Renames the property.
+     *
+     * @param newName  the new name of the property
+     */
     public void renameProperty(String newName)
     {
         this.propertyName = newName;
     }
 
-
+    /**
+     * Removes a reservation associated with the given guest name.
+     *
+     * @param guestName  the name of the guest whose reservation is to be removed
+     * @return {@code true} if the reservation was successfully removed;
+     *         {@code false} if no matching reservation was found
+     */
     public boolean removeReservation(String guestName)
     {
         Reservation target = null;
-        for (Reservation r : reservations)
+
+        for (int i = 0; i < reservations.size(); i++)
         {
+            Reservation r = reservations.get(i);
             if (r.getGuestName().equalsIgnoreCase(guestName))
             {
                 target = r;
                 break;
             }
         }
+
         if (target == null)
         {
+            System.out.println("No reservation found for " + guestName);
             return false;
         }
+
         for (int d = target.getCheckInDay(); d < target.getCheckOutDay(); d++)
         {
             dates.get(d - 1).cancelBooking();
         }
+
         reservations.remove(target);
+        System.out.println("Reservation for " + guestName + " removed.");
         return true;
     }
 
+    /**
+     * Checks if the property can be safely removed,
+     * i.e., it has no existing reservations.
+     *
+     * @return {@code true} if the property has no reservations;
+     *         {@code false} otherwise
+     */
     public boolean canBeRemoved()
     {
-        return reservations.isEmpty();
+        return reservations.size() == 0;
     }
 
+    /**
+     * Counts how many dates in the calendar are still available.
+     *
+     * @return the number of available days
+     */
     public int countAvailableDates()
     {
         int count = 0;
-        for (DateSlot d : dates)
+
+        for (int i = 0; i < dates.size(); i++)
         {
-            if (d.isAvailable())
+            if (dates.get(i).isAvailable())
             {
                 count++;
             }
         }
+
         return count;
     }
 
+    /**
+     * Computes the total earnings from all reservations.
+     *
+     * @return the total earnings in PHP
+     */
     public double getTotalEarnings()
     {
-        double total = 0;
-        for (Reservation r : reservations)
+        double total = 0.0;
+
+        for (int i = 0; i < reservations.size(); i++)
         {
-            total += r.getTotalPrice();
+            total += reservations.get(i).getTotalPrice();
         }
+
         return total;
     }
 
+    /**
+     * Displays information for a specific day in the calendar,
+     * including its availability and price.
+     *
+     * @param day  the day number (1–30)
+     */
     public void getDateInfo(int day)
     {
         if (day < 1 || day > 30)
@@ -264,11 +282,25 @@ public class Property
             System.out.println("Invalid day.");
             return;
         }
+
         DateSlot slot = dates.get(day - 1);
-        System.out.println("Day " + day + ": PHP " + slot.getPricePerNight() + " - " + (slot.isBooked() ? "BOOKED" : "AVAILABLE"));
+
+        if (slot.isBooked())
+        {
+            System.out.println("Day " + day + ": PHP " + slot.getPricePerNight() + " - BOOKED");
+        }
+        else
+        {
+            System.out.println("Day " + day + ": PHP " + slot.getPricePerNight() + " - AVAILABLE");
+        }
     }
 
-
+    /**
+     * Displays a summary of booked and available days within a given range.
+     *
+     * @param start  the start day (inclusive)
+     * @param end    the end day (inclusive)
+     */
     public void getRangeSummary(int start, int end)
     {
         if (start < 1 || end > 30 || start > end)
@@ -276,18 +308,56 @@ public class Property
             System.out.println("Invalid range.");
             return;
         }
+
         int available = 0;
         int booked = 0;
+
         for (int i = start - 1; i < end; i++)
         {
             if (dates.get(i).isAvailable())
             {
                 available++;
-            } else {
+            }
+            else
+            {
                 booked++;
             }
         }
-        System.out.println("Range " + start + "–" + end + ": " + available + " available, " + booked + " booked.");
+
+        System.out.println("Range " + start + "–" + end + ": " +
+                available + " available, " + booked + " booked.");
     }
 
+    /**
+     * Displays the entire 30-day calendar for the property.
+     */
+    public void displayCalendar()
+    {
+        System.out.println("\n=== Calendar for " + propertyName + " ===");
+
+        for (int i = 0; i < dates.size(); i++)
+        {
+            System.out.println(dates.get(i));
+        }
+    }
+
+    /**
+     * Displays all reservations made for this property.
+     */
+    public void displayReservations()
+    {
+        System.out.println("\n=== Reservations for " + propertyName + " ===");
+
+        if (reservations.size() == 0)
+        {
+            System.out.println("No reservations yet.");
+        }
+        else
+        {
+            for (int i = 0; i < reservations.size(); i++)
+            {
+                System.out.println(reservations.get(i));
+            }
+        }
+    }
 }
