@@ -360,4 +360,14 @@ public class Property
             }
         }
     }
+
+    public void setPropertyName(String newName)
+    {
+        propertyName = newName;
+    }
+
+    public void setBasePrice(double newBasePrice)
+    {
+        basePrice = newBasePrice;
+    }
 }
