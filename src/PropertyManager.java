@@ -2,23 +2,34 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The {@code PropertyManager} class manages a collection of {@link Property} objects
+ * The {@code PropertyManager} class manages all {@link Property} objects
  * within the Green Property system.
  * <p>
- * It provides functionality to add, remove, rename, and list properties,
- * as well as handle bookings on behalf of properties.
- * <p>
- * This class demonstrates the concept of <b>encapsulation</b> by keeping
- * the property list private and exposing controlled access through public methods.
+ * It provides centralized operations for adding, removing, renaming, and booking properties.
+ * Each property is uniquely identified by name, and the manager ensures that
+ * no duplicates are added.
+ * </p>
+ *
+ * <p><b>Key Responsibilities:</b></p>
+ * <ul>
+ *     <li>Maintain a collection of all {@link Property} instances</li>
+ *     <li>Ensure unique property names</li>
+ *     <li>Support property booking and removal</li>
+ *     <li>Provide access to the list of managed properties</li>
+ * </ul>
  *
  * @author
  * Crisologo, Lim Un
- * @version 2.0
+ * @version 2.1
  */
 public class PropertyManager
 {
-    /** A list storing all {@link Property} objects managed by this system. */
+    /** The list storing all {@link Property} objects managed by the system. */
     private List<Property> properties;
+
+    // -------------------------------------------------------
+    // CONSTRUCTOR
+    // -------------------------------------------------------
 
     /**
      * Constructs a new {@code PropertyManager} with an empty list of properties.
@@ -28,13 +39,17 @@ public class PropertyManager
         this.properties = new ArrayList<>();
     }
 
+    // -------------------------------------------------------
+    // CORE METHODS
+    // -------------------------------------------------------
+
     /**
-     * Adds a new property to the system, if the name is unique.
+     * Adds a new property to the system if its name is unique.
      *
      * @param name       The name of the property to add
      * @param basePrice  The base price per night for the property
      * @return {@code true} if the property was successfully added;
-     *         {@code false} if the name is not unique
+     *         {@code false} if a property with the same name already exists
      */
     public boolean addProperty(String name, double basePrice)
     {
@@ -51,7 +66,7 @@ public class PropertyManager
     }
 
     /**
-     * Removes an existing property by name, if no active reservations exist.
+     * Removes an existing property from the system, provided it has no active reservations.
      *
      * @param name The name of the property to remove
      * @return {@code true} if the property was successfully removed;
@@ -62,6 +77,7 @@ public class PropertyManager
         for (int i = 0; i < properties.size(); i++)
         {
             Property p = properties.get(i);
+
             if (p.getPropertyName().equalsIgnoreCase(name))
             {
                 if (!p.canBeRemoved())
@@ -69,22 +85,24 @@ public class PropertyManager
                     System.out.println("Cannot remove \"" + name + "\": Active reservations exist.");
                     return false;
                 }
+
                 properties.remove(i);
                 System.out.println("Property \"" + name + "\" removed.");
                 return true;
             }
         }
+
         System.out.println("No property found with the name \"" + name + "\".");
         return false;
     }
 
     /**
-     * Renames an existing property, provided the new name is unique.
+     * Renames an existing property if the new name is unique.
      *
      * @param oldName The current name of the property
      * @param newName The desired new name
-     * @return {@code true} if renamed successfully; {@code false} if the new name
-     *         is not unique or the property cannot be found
+     * @return {@code true} if the property was successfully renamed;
+     *         {@code false} if the new name already exists or the property cannot be found
      */
     public boolean renameProperty(String oldName, String newName)
     {
@@ -107,10 +125,10 @@ public class PropertyManager
     }
 
     /**
-     * Attempts to create a reservation for a specified property.
+     * Attempts to book a reservation for the specified property.
      *
      * @param name       The name of the property to book
-     * @param guestName  The guest making the reservation
+     * @param guestName  The name of the guest making the reservation
      * @param checkIn    The check-in day (1–30)
      * @param checkOut   The check-out day (1–30)
      * @return {@code true} if the booking was successful; {@code false} otherwise
@@ -126,11 +144,15 @@ public class PropertyManager
         return p.addReservation(guestName, checkIn, checkOut);
     }
 
+    // -------------------------------------------------------
+    // HELPER METHODS
+    // -------------------------------------------------------
+
     /**
-     * Retrieves a {@link Property} object by name.
+     * Retrieves a {@link Property} object by its name.
      *
-     * @param name The name of the property to find
-     * @return The corresponding {@link Property} if found, or {@code null} if not
+     * @param name The name of the property to search for
+     * @return The {@link Property} object if found, or {@code null} if no match exists
      */
     public Property getProperty(String name)
     {
@@ -145,10 +167,10 @@ public class PropertyManager
     }
 
     /**
-     * Returns a list of all properties currently managed.
+     * Returns a list of all properties currently managed by the system.
      * <p>
-     * The returned list is a direct reference to the internal list,
-     * so modifications affect the original data.
+     * The returned list directly references the internal list,
+     * so modifications will affect the original data.
      *
      * @return A list of all managed {@link Property} objects
      */
@@ -158,11 +180,10 @@ public class PropertyManager
     }
 
     /**
-     * Checks if a property name is unique among all managed properties.
+     * Checks whether a given property name is unique across all managed properties.
      *
-     * @param name The property name to check
-     * @return {@code true} if no other property shares this name;
-     *         {@code false} otherwise
+     * @param name The name to verify
+     * @return {@code true} if the name is unique; {@code false} otherwise
      */
     public boolean isUniqueName(String name)
     {
