@@ -27,9 +27,7 @@ public class PropertyManager
     /** The list storing all {@link Property} objects managed by the system. */
     private List<Property> properties;
 
-    // -------------------------------------------------------
     // CONSTRUCTOR
-    // -------------------------------------------------------
 
     /**
      * Constructs a new {@code PropertyManager} with an empty list of properties.
@@ -39,9 +37,8 @@ public class PropertyManager
         this.properties = new ArrayList<>();
     }
 
-    // -------------------------------------------------------
+
     // CORE METHODS
-    // -------------------------------------------------------
 
     /**
      * Adds a new property to the system if its name is unique.
@@ -144,9 +141,8 @@ public class PropertyManager
         return p.addReservation(guestName, checkIn, checkOut);
     }
 
-    // -------------------------------------------------------
+
     // HELPER METHODS
-    // -------------------------------------------------------
 
     /**
      * Retrieves a {@link Property} object by its name.
