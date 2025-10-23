@@ -2,24 +2,32 @@ import java.util.List;
 import java.util.Scanner;
 
 /**
- * The {@code Main} class serves as the entry point for the Green Property System.
- * It provides a text-based menu interface for managing properties and reservations.
+ * The Main class serves as the entry point for the Green Property System.
+ * It provides a text-based interface for managing properties and reservations
+ * through various menu options.
+ * <p>
+ * This class coordinates actions such as creating properties, viewing details,
+ * managing reservations, and simulating bookings.
+ * </p>
  *
  * @author
  *     Crisologo, Lim Un
  * @version
  *     1.3
  */
-public class Main
-{
+public class Main {
+
+    /** The manager responsible for all property operations. */
     private PropertyManager propertyManager;
+
+    /** Scanner used for reading user input from the console. */
     private Scanner scanner;
 
     /**
-     * Constructs a new Main application with a PropertyManager instance.
+     * Creates a new Main application instance with an initialized
+     * PropertyManager and Scanner.
      */
-    public Main()
-    {
+    public Main() {
         this.propertyManager = new PropertyManager();
         this.scanner = new Scanner(System.in);
     }
@@ -27,32 +35,29 @@ public class Main
     /**
      * Main entry point of the program.
      *
-     * @param args Command-line arguments (not used)
+     * @param args command-line arguments (not used)
      */
-    public static void main(String[] args)
-    {
+    public static void main(String[] args) {
         Main app = new Main();
         app.start();
     }
 
     /**
-     * Starts the main application loop, displaying the menu and handling user input.
+     * Starts the main application loop, showing the main menu and
+     * responding to user selections until the program exits.
      */
-    public void start()
-    {
+    public void start() {
         System.out.println("===========================================");
         System.out.println("      GREEN PROPERTY EXCHANGE SYSTEM      ");
         System.out.println("===========================================");
 
         boolean running = true;
 
-        while (running)
-        {
+        while (running) {
             displayMainMenu();
             int choice = getUserChoice();
 
-            switch (choice)
-            {
+            switch (choice) {
                 case 1:
                     createProperty();
                     break;
@@ -77,8 +82,7 @@ public class Main
                     break;
             }
 
-            if (running)
-            {
+            if (running) {
                 System.out.println("\nPress Enter to continue...");
                 scanner.nextLine();
             }
@@ -86,9 +90,8 @@ public class Main
         scanner.close();
     }
 
-    /** Displays the main menu options to the user. */
-    private void displayMainMenu()
-    {
+    /** Displays the main menu options. */
+    private void displayMainMenu() {
         System.out.println("\nMain Menu:");
         System.out.println("1. Create Property");
         System.out.println("2. View Property Details");
@@ -99,16 +102,13 @@ public class Main
         System.out.print("Enter your choice: ");
     }
 
-    /** Handles property creation by prompting the user for details. */
-    private void createProperty()
-    {
+    /** Creates a new property by prompting the user for details. */
+    private void createProperty() {
         System.out.println("\n=== CREATE PROPERTY ===");
-
         System.out.print("Enter property name: ");
         String name = scanner.nextLine().trim();
 
-        if (name.isEmpty())
-        {
+        if (name.isEmpty()) {
             System.out.println("Property name cannot be empty.");
             return;
         }
@@ -117,44 +117,33 @@ public class Main
         System.out.print("Enter base price per night (default 1500.0): ");
         String priceInput = scanner.nextLine().trim();
 
-        if (priceInput.isEmpty())
-        {
+        if (priceInput.isEmpty()) {
             basePrice = 1500.0;
-        }
-        else
-        {
-            try
-            {
+        } else {
+            try {
                 basePrice = Double.parseDouble(priceInput);
-                if (basePrice < 100)
-                {
+                if (basePrice < 100) {
                     System.out.println("Base price must be at least PHP 100.00.");
                     return;
                 }
-            }
-            catch (NumberFormatException e)
-            {
+            } catch (NumberFormatException e) {
                 System.out.println("Invalid input for base price.");
                 return;
             }
         }
 
         boolean success = propertyManager.addProperty(name, basePrice);
-
-        if (success)
-        {
+        if (success) {
             System.out.println("Property \"" + name + "\" created successfully with base price PHP " + basePrice + ".");
         }
     }
 
-    /** Handles viewing details of a specific property. */
-    private void viewProperty()
-    {
+    /** Allows the user to view details of an existing property. */
+    private void viewProperty() {
         System.out.println("\n=== VIEW PROPERTY DETAILS ===");
         List<Property> properties = propertyManager.listProperties();
 
-        if (properties.isEmpty())
-        {
+        if (properties.isEmpty()) {
             System.out.println("No properties available.");
             return;
         }
@@ -162,8 +151,8 @@ public class Main
         displayPropertiesList(properties);
         System.out.print("Enter the number of the property to view details: ");
         int choice = choice();
-        if (choice < 1 || choice > properties.size())
-        {
+
+        if (choice < 1 || choice > properties.size()) {
             System.out.println("Invalid property selection.");
             return;
         }
@@ -172,12 +161,10 @@ public class Main
         viewPropertySubMenu(selectedProperty);
     }
 
-    /** Displays the submenu for viewing a specific property's details. */
-    private void viewPropertySubMenu(Property property)
-    {
+    /** Displays options for viewing property details. */
+    private void viewPropertySubMenu(Property property) {
         boolean viewing = true;
-        while (viewing)
-        {
+        while (viewing) {
             System.out.println("\n=== VIEW PROPERTY: " + property.getPropertyName() + " ===");
             System.out.println("1. Calendar View");
             System.out.println("2. High-Level Information");
@@ -187,8 +174,7 @@ public class Main
 
             int choice = getUserChoice();
 
-            switch (choice)
-            {
+            switch (choice) {
                 case 1:
                     displayCalendar(property);
                     break;
@@ -208,51 +194,36 @@ public class Main
         }
     }
 
-    /** Displays calendar view for a property. */
-    private void displayCalendar(Property property)
-    {
+    /** Displays the calendar view for the selected property. */
+    private void displayCalendar(Property property) {
         System.out.println("\n=== CALENDAR VIEW FOR " + property.getPropertyName() + " ===");
         System.out.println("┌───┬───┬───┬───┬───┬───┬───┐");
 
-        for (int week = 0; week < 5; week++)
-        {
+        for (int week = 0; week < 5; week++) {
             System.out.print("│");
-            for (int day = 1; day <= 7; day++)
-            {
+            for (int day = 1; day <= 7; day++) {
                 int dayNumber = week * 7 + day;
-                if (dayNumber > 30)
-                {
+                if (dayNumber > 30) {
                     System.out.print("   │");
-                }
-                else
-                {
-                    DateSlot dateSlot = property.getDates().get(dayNumber - 1);
-                    if (dateSlot.isBooked())
-                    {
-                        System.out.print(" R │");
-                    }
-                    else
-                    {
-                        System.out.print(" A │");
-                    }
+                } else {
+                    DateSlot slot = property.getDates().get(dayNumber - 1);
+                    System.out.print(slot.isBooked() ? " R │" : " A │");
                 }
             }
             System.out.println();
-            if (week < 4)
-            {
+            if (week < 4) {
                 System.out.println("├───┼───┼───┼───┼───┼───┼───┤");
             }
         }
-        System.out.println("└───┴───┴───┴───┴───┴───┴───┘");
 
+        System.out.println("└───┴───┴───┴───┴───┴───┴───┘");
         System.out.println("\n[A] Available");
         System.out.println("[R] Reserved");
         System.out.println("Base Price: PHP " + property.getBasePrice());
     }
 
-    /** Displays high-level information about a given property. */
-    private void displayHighLevelInfo(Property property)
-    {
+    /** Displays high-level summary information for the property. */
+    private void displayHighLevelInfo(Property property) {
         System.out.println("\n=== HIGH-LEVEL INFORMATION ===");
         System.out.println("Property Name: " + property.getPropertyName());
         System.out.println("Base Price per Night: PHP " + property.getBasePrice());
@@ -261,9 +232,8 @@ public class Main
         System.out.println("Total Earnings: PHP " + property.getTotalEarnings());
     }
 
-    /** Displays detailed information about a given property. */
-    private void displayPropertyDetails(Property property)
-    {
+    /** Displays full details and reservations of the property. */
+    private void displayPropertyDetails(Property property) {
         System.out.println("\n=== PROPERTY DETAILS ===");
         System.out.println("Property Name: " + property.getPropertyName());
         System.out.println("Base Price per Night: PHP " + property.getBasePrice());
@@ -272,14 +242,12 @@ public class Main
         property.displayReservations();
     }
 
-    /** Handles managing reservations for a specific property. */
-    private void manageProperty()
-    {
+    /** Opens the property management menu. */
+    private void manageProperty() {
         System.out.println("\n=== MANAGE PROPERTY ===");
         List<Property> properties = propertyManager.listProperties();
 
-        if (properties.isEmpty())
-        {
+        if (properties.isEmpty()) {
             System.out.println("No properties available.");
             return;
         }
@@ -288,17 +256,15 @@ public class Main
         System.out.print("Enter the number of the property to manage: ");
         int choice = choice();
 
-        if (choice < 1 || choice > properties.size())
-        {
+        if (choice < 1 || choice > properties.size()) {
             System.out.println("Invalid property selection.");
             return;
         }
 
         Property selectedProperty = properties.get(choice - 1);
-
         boolean managing = true;
-        while (managing)
-        {
+
+        while (managing) {
             System.out.println("\n=== MANAGE PROPERTY: " + selectedProperty.getPropertyName() + " ===");
             System.out.println("1. Change Property Name");
             System.out.println("2. Update Base Price");
@@ -310,8 +276,7 @@ public class Main
 
             int manageChoice = getUserChoice();
 
-            switch (manageChoice)
-            {
+            switch (manageChoice) {
                 case 1:
                     changePropertyName(selectedProperty);
                     break;
@@ -338,29 +303,24 @@ public class Main
         }
     }
 
-    /** Removes a reservation from a property. */
-    private void removeReservation(Property property)
-    {
+    /** Removes a reservation from the specified property. */
+    private void removeReservation(Property property) {
         System.out.println("\n=== REMOVE RESERVATION ===");
         List<Reservation> reservations = property.getReservations();
 
-        if (reservations.isEmpty())
-        {
+        if (reservations.isEmpty()) {
             System.out.println("No reservations to remove.");
             return;
         }
 
-        for (int i = 0; i < reservations.size(); i++)
-        {
-            Reservation r = reservations.get(i);
-            System.out.println((i + 1) + ". " + r);
+        for (int i = 0; i < reservations.size(); i++) {
+            System.out.println((i + 1) + ". " + reservations.get(i));
         }
 
         System.out.print("Enter the number of the reservation to remove: ");
         int choice = choice();
 
-        if (choice < 1 || choice > reservations.size())
-        {
+        if (choice < 1 || choice > reservations.size()) {
             System.out.println("Invalid reservation selection.");
             return;
         }
@@ -371,19 +331,16 @@ public class Main
     }
 
     /** Changes the name of a property. */
-    private void changePropertyName(Property property)
-    {
+    private void changePropertyName(Property property) {
         System.out.print("Enter new property name: ");
         String newName = scanner.nextLine().trim();
 
-        if (newName.isEmpty())
-        {
+        if (newName.isEmpty()) {
             System.out.println("Property name cannot be empty.");
             return;
         }
 
-        if (!propertyManager.isUniqueName(newName))
-        {
+        if (!propertyManager.isUniqueName(newName)) {
             System.out.println("A property with that name already exists.");
             return;
         }
@@ -392,49 +349,37 @@ public class Main
         System.out.println("Property name updated successfully to \"" + newName + "\".");
     }
 
-    /** Updates the base price of a property. */
-    private void updateBasePrice(Property property)
-    {
+    /** Updates the base price per night of a property. */
+    private void updateBasePrice(Property property) {
         System.out.print("Enter new base price per night: ");
-        String priceInput = scanner.nextLine().trim();
+        String input = scanner.nextLine().trim();
 
-        double newBasePrice;
-        try
-        {
-            newBasePrice = Double.parseDouble(priceInput);
-            if (newBasePrice < 100)
-            {
+        try {
+            double newBasePrice = Double.parseDouble(input);
+            if (newBasePrice < 100) {
                 System.out.println("Base price must be at least PHP 100.00.");
                 return;
             }
-        }
-        catch (NumberFormatException e)
-        {
+            property.updateBasePrice(newBasePrice);
+        } catch (NumberFormatException e) {
             System.out.println("Invalid input for base price.");
-            return;
         }
-
-        property.updateBasePrice(newBasePrice);
     }
 
-    /** Removes a property from the PropertyManager. */
-    private void removeProperty(Property property)
-    {
+    /** Removes a property from the system. */
+    private void removeProperty(Property property) {
         boolean success = propertyManager.removeProperty(property.getPropertyName());
-        if (success)
-        {
+        if (success) {
             System.out.println("Property \"" + property.getPropertyName() + "\" removed successfully.");
         }
     }
 
-    /** Lists all properties managed by the PropertyManager. */
-    private void listAllProperties()
-    {
+    /** Lists all properties currently managed by the system. */
+    private void listAllProperties() {
         System.out.println("\n=== LIST OF ALL PROPERTIES ===");
         List<Property> properties = propertyManager.listProperties();
 
-        if (properties.isEmpty())
-        {
+        if (properties.isEmpty()) {
             System.out.println("No properties available.");
             return;
         }
@@ -442,77 +387,63 @@ public class Main
         displayPropertiesList(properties);
     }
 
-    /** Displays a numbered list of properties. */
-    private void displayPropertiesList(List<Property> properties)
-    {
-        for (int i = 0; i < properties.size(); i++)
-        {
+    /** Displays all properties with their base prices. */
+    private void displayPropertiesList(List<Property> properties) {
+        for (int i = 0; i < properties.size(); i++) {
             Property p = properties.get(i);
             System.out.println((i + 1) + ". " + p.getPropertyName() + " (Base Price: PHP " + p.getBasePrice() + ")");
         }
     }
 
-    /** Simulates booking a reservation for a property. */
-    private void simulateBooking()
-    {
+    /** Simulates creating a new reservation for a selected property. */
+    private void simulateBooking() {
         System.out.println("\n=== SIMULATE BOOKING ===");
         List<Property> properties = propertyManager.listProperties();
 
-        if (properties.isEmpty())
-        {
+        if (properties.isEmpty()) {
             System.out.println("No properties available.");
             return;
         }
 
         displayPropertiesList(properties);
-        System.out.print("Enter the number of the property to simulate booking: ");
+        System.out.print("Enter the number of the property to book: ");
         int choice = choice();
-        if (choice < 1 || choice > properties.size())
-        {
-            System.out.println("Invalid property selection.");
+
+        if (choice < 1 || choice > properties.size()) {
+            System.out.println("Invalid selection.");
             return;
         }
 
-        Property selectedProperty = properties.get(choice - 1);
+        Property selected = properties.get(choice - 1);
         System.out.print("Enter guest name: ");
-        String guestName = scanner.nextLine().trim();
+        String guest = scanner.nextLine().trim();
         System.out.print("Enter check-in day (1–30): ");
-        int checkIn = choice();
+        int in = choice();
         System.out.print("Enter check-out day (1–30): ");
-        int checkOut = choice();
+        int out = choice();
 
-        selectedProperty.addReservation(guestName, checkIn, checkOut);
+        selected.addReservation(guest, in, out);
     }
 
-    /** Gets user choice with validation. */
-    private int getUserChoice()
-    {
-        while (true)
-        {
+    /** Reads and validates user input for menu selections. */
+    private int getUserChoice() {
+        while (true) {
             String input = scanner.nextLine().trim();
-            try
-            {
+            try {
                 return Integer.parseInt(input);
-            }
-            catch (NumberFormatException e)
-            {
+            } catch (NumberFormatException e) {
                 System.out.print("Invalid input. Please enter a number: ");
             }
         }
     }
 
-    /** Helper for numeric input parsing. */
-    private int choice()
-    {
-        while (true)
-        {
+    /** Reads and validates numeric input for general use. */
+    private int choice() {
+        while (true) {
             String input = scanner.nextLine().trim();
-            try
-            {
+            try {
                 return Integer.parseInt(input);
-            }
-            catch (NumberFormatException e)
-            {
+            } catch (NumberFormatException e) {
                 System.out.print("Invalid input. Please enter a number: ");
             }
         }

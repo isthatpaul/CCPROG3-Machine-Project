@@ -1,157 +1,132 @@
 /**
- * The {@code DateSlot} class represents a single day (slot) in the
- * 30-day calendar of a {@link Property} in the Green Property system.
+ * The DateSlot class represents a single day in the 30-day calendar
+ * of a Property in the Green Property system. It tracks the day number,
+ * nightly rate, and whether the day is booked or available.
  * <p>
- * Each slot records:
- * <ul>
- *     <li>The day number (1–30)</li>
- *     <li>The base price per night</li>
- *     <li>Whether the day is booked or available</li>
- *     <li>The {@link Reservation} that booked it (if any)</li>
- * </ul>
+ * Each slot may also reference a Reservation that has booked it.
+ * </p>
  *
- * @author Crisologo, Lim Un
- * @version 2.0
+ * @author
+ *     Crisologo, Lim Un
+ * @version
+ *     2.0
  */
-public class DateSlot
-{
-    /** The numerical day in the 30-day month (1–30). */
+public class DateSlot {
+
+    /** The day number in the 30-day month (1–30). */
     private final int dayNumber;
 
     /** The price per night for this day. */
     private double pricePerNight;
 
-    /** Indicates whether the day is already booked. */
+    /** Indicates whether this day is currently booked. */
     private boolean booked;
 
-    /** The reservation associated with this day, if booked. */
+    /** The reservation that has booked this day, if any. */
     private Reservation reservation;
 
-    // CONSTRUCTOR
-
     /**
-     * Constructs a {@code DateSlot} for a specific day and assigns the base price.
+     * Creates a new DateSlot for the given day and assigns its base price.
      *
-     * @param dayNumber  The day number (1–30)
-     * @param basePrice  The default price per night
+     * @param dayNumber the day number (1–30)
+     * @param basePrice the default nightly price
      */
-    public DateSlot(int dayNumber, double basePrice)
-    {
+    public DateSlot(int dayNumber, double basePrice) {
         this.dayNumber = dayNumber;
         this.pricePerNight = basePrice;
         this.booked = false;
         this.reservation = null;
     }
 
-    // GETTERS AND SETTERS
-
     /**
-     * Returns the day number for this slot.
+     * Gets the day number for this slot.
      *
-     * @return The day number (1–30)
+     * @return the day number (1–30)
      */
-    public int getDayNumber()
-    {
+    public int getDayNumber() {
         return dayNumber;
     }
 
     /**
-     * Returns the price per night for this slot.
+     * Gets the nightly price for this slot.
      *
-     * @return The nightly price
+     * @return the price per night
      */
-    public double getPricePerNight()
-    {
+    public double getPricePerNight() {
         return pricePerNight;
     }
 
     /**
-     * Updates the price per night for this slot.
+     * Sets a new nightly price for this slot.
      *
-     * @param pricePerNight The new nightly price
+     * @param pricePerNight the new nightly price
      */
-    public void setPricePerNight(double pricePerNight)
-    {
+    public void setPricePerNight(double pricePerNight) {
         this.pricePerNight = pricePerNight;
     }
 
     /**
-     * Returns {@code true} if the day is already booked.
+     * Checks if this day is booked.
      *
-     * @return Whether this day is booked
+     * @return true if booked, false otherwise
      */
-    public boolean isBooked()
-    {
+    public boolean isBooked() {
         return booked;
     }
 
     /**
-     * Returns the {@link Reservation} that has booked this day.
-     * If the day is not booked, this method returns {@code null}.
+     * Gets the reservation that booked this day.
+     * Returns null if the day is available.
      *
-     * @return The reservation that booked this day, or null if available
+     * @return the reservation that booked this day, or null if available
      */
-    public Reservation getReservation()
-    {
+    public Reservation getReservation() {
         return reservation;
     }
 
     /**
-     * Returns {@code true} if the day is currently available for booking.
+     * Checks if this day is available for booking.
      *
-     * @return True if not booked, false if already booked
+     * @return true if available, false if already booked
      */
-    public boolean isAvailable()
-    {
+    public boolean isAvailable() {
         return !booked;
     }
 
-    // CORE FUNCTIONALITY
-
     /**
-     * Attempts to book this day for a given reservation.
-     * <p>
+     * Books this day for the given reservation.
      * If the day is already booked, the booking will fail.
      *
-     * @param res The reservation attempting to book the day
-     * @return {@code true} if successfully booked; {@code false} if already booked
+     * @param res the reservation to assign to this day
+     * @return true if successfully booked, false if already booked
      */
-    public boolean book(Reservation res)
-    {
+    public boolean book(Reservation res) {
         if (booked) {
             return false;
-        } else {
-            booked = true;
-            reservation = res;
-            return true;
         }
+        booked = true;
+        reservation = res;
+        return true;
     }
 
     /**
-     * Cancels any existing booking on this day.
-     * After calling this method, the day becomes available again.
+     * Cancels any existing booking for this day, making it available again.
      */
-    public void cancelBooking()
-    {
+    public void cancelBooking() {
         booked = false;
         reservation = null;
     }
 
-    // DISPLAY METHOD
-
     /**
-     * Returns a readable string showing the status of this date slot.
+     * Returns a string summary of this date slot’s status.
      *
-     * @return A string describing the booking status of this date slot
+     * @return a formatted string showing whether the day is booked or available
      */
     @Override
-    public String toString()
-    {
-        if (booked && reservation != null)
-        {
+    public String toString() {
+        if (booked && reservation != null) {
             return "Day " + dayNumber + " - BOOKED (" + reservation.getGuestName() + ")";
-        } else {
-            return "Day " + dayNumber + " - AVAILABLE";
         }
+        return "Day " + dayNumber + " - AVAILABLE";
     }
 }
