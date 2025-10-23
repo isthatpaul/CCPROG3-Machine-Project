@@ -8,7 +8,6 @@ import java.util.List;
  * It provides centralized operations for adding, removing, renaming, and booking properties.
  * Each property is uniquely identified by name, and the manager ensures that
  * no duplicates are added.
- * </p>
  *
  * <p><b>Key Responsibilities:</b></p>
  * <ul>
