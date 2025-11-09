@@ -417,9 +417,9 @@ public class Main {
         Property selected = properties.get(choice - 1);
         System.out.print("Enter guest name: ");
         String guest = scanner.nextLine().trim();
-        System.out.print("Enter check-in day (1–30): ");
+        System.out.print("Enter check-in day (1-30): ");
         int in = choice();
-        System.out.print("Enter check-out day (1–30): ");
+        System.out.print("Enter check-out day (1-30): ");
         int out = choice();
 
         selected.addReservation(guest, in, out);

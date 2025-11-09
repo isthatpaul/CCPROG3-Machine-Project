@@ -86,7 +86,7 @@ public class Property {
             int existingOut = r.getCheckOutDay();
             if (checkIn < existingOut && checkOut > existingIn) {
                 System.out.println("Conflict: Overlaps with another reservation (" +
-                        r.getGuestName() + " " + existingIn + "–" + existingOut + ").");
+                        r.getGuestName() + " " + existingIn + "-" + existingOut + ").");
                 return false;
             }
         }
@@ -99,7 +99,7 @@ public class Property {
         }
 
         System.out.println("Reservation confirmed for " + guestName +
-                " (Days " + checkIn + "–" + checkOut + ")");
+                " (Days " + checkIn + "-" + checkOut + ")");
         return true;
     }
 
