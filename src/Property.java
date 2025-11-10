@@ -1,10 +1,11 @@
+import java.awt.Color;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * The abstract Property class serves as the base for all property types in the system.
  * It implements common property management logic and defines abstract methods for polymorphism.
- * * @author Crisologo, Lim Un
+ * @author Crisologo, Lim Un
  * @version 5.0 (Updated for MCO2)
  */
 public abstract class Property {
@@ -39,7 +40,7 @@ public abstract class Property {
      * Calculates the final nightly rate for a specific day, factoring in the
      * property type multiplier and the day's environmental impact modifier.
      * Final Rate = Base Price * Type Multiplier * Env Modifier
-     * * @param day the day number (1–30)
+     * @param day the day number (1–30)
      * @return the final calculated price per night
      */
     public double calculateFinalDailyRate(int day) {
@@ -94,8 +95,12 @@ public abstract class Property {
      * The loop updating DateSlot prices is removed as DateSlot no longer stores price.
      */
     public boolean updateBasePrice(double newPrice) {
-        if (newPrice < 100.0) { return false; }
-        if (!reservations.isEmpty()) { return false; }
+        if (newPrice < 100.0) {
+            return false;
+        }
+        if (!reservations.isEmpty()) {
+            return false;
+        }
 
         this.basePrice = newPrice;
         return true;
@@ -103,17 +108,32 @@ public abstract class Property {
 
     // --- EXISTING MCO1 METHODS (Getters) ---
 
-    public String getPropertyName() { return propertyName; }
-    public double getBasePrice() { return basePrice; }
-    public List<DateSlot> getDates() { return dates; }
-    public List<Reservation> getReservations() { return reservations; }
+    public String getPropertyName() {
+        return propertyName;
+    }
+
+    public double getBasePrice() {
+        return basePrice;
+    }
+
+    public List<DateSlot> getDates() {
+        return dates;
+    }
+
+    public List<Reservation> getReservations() {
+        return reservations;
+    }
 
     // Renames the property.
-    public void setPropertyName(String newName) { this.propertyName = newName; }
+    public void setPropertyName(String newName) {
+        this.propertyName = newName;
+    }
 
     // Removes a reservation
     public boolean removeReservation(Reservation reservation) {
-        if (!reservations.contains(reservation)) { return false; }
+        if (!reservations.contains(reservation)) {
+            return false;
+        }
 
         for (int d = reservation.getCheckInDay(); d < reservation.getCheckOutDay(); d++) {
             dates.get(d - 1).cancelBooking();
@@ -124,7 +144,9 @@ public abstract class Property {
     }
 
     // Returns true if the property has no active reservations.
-    public boolean canBeRemoved() { return reservations.isEmpty(); }
+    public boolean canBeRemoved() {
+        return reservations.isEmpty();
+    }
 
     // Returns the total earnings from all reservations.
     public double getTotalEarnings() {
@@ -146,5 +168,74 @@ public abstract class Property {
         return count;
     }
 
-    // Other MCO1 display methods (getDateInfo, getRangeSummary, displayCalendar, displayReservations) are now obsolete/moved to GUI logic.
+    /**
+     * Determines the color to use for displaying the environmental impact level of a date.
+     * @param day the day number (1-30)
+     * @return Color.GREEN for reduced impact (80-89% of base price)
+     *         Color.WHITE for standard impact (100% of base price)
+     *         Color.YELLOW for increased impact (101-120% of base price)
+     */
+    public Color getEnvironmentalImpactColor(int day) {
+        if (day < 1 || day > 30) return Color.WHITE;
+
+        DateSlot slot = dates.get(day - 1);
+        double modifier = slot.getEnvImpactModifier();
+
+        if (modifier >= 0.80 && modifier <= 0.89) {
+            return Color.GREEN;      // Reduced environmental impact (80-89%)
+        } else if (modifier == 1.0) {
+            return Color.WHITE;      // Standard impact (100%)
+        } else if (modifier >= 1.01 && modifier <= 1.20) {
+            return Color.YELLOW;     // Increased impact (101-120%)
+        } else {
+            return Color.WHITE;      // Default to white for any other cases
+        }
+    }
+
+    /**
+     * Sets the environmental impact modifier for a specific date.
+     * @param day the day number (1-30)
+     * @param modifier the environmental impact modifier (0.8 to 1.2)
+     * @return true if successful, false if invalid day or modifier
+     */
+    public boolean setEnvironmentalImpact(int day, double modifier) {
+        if (day < 1 || day > 30) return false;
+        if (modifier < 0.8 || modifier > 1.2) return false;
+
+        DateSlot slot = dates.get(day - 1);
+        slot.setEnvImpactModifier(modifier);
+        return true;
+    }
+
+    /**
+     * Sets environmental impact modifiers for a range of dates.
+     * @param startDay start day (inclusive)
+     * @param endDay end day (inclusive)
+     * @param modifier the environmental impact modifier (0.8 to 1.2)
+     * @return true if successful, false if invalid range or modifier
+     */
+    public boolean setEnvironmentalImpactRange(int startDay, int endDay, double modifier) {
+        if (startDay < 1 || endDay > 30 || startDay > endDay) return false;
+        if (modifier < 0.8 || modifier > 1.2) return false;
+
+        for (int day = startDay; day <= endDay; day++) {
+            DateSlot slot = dates.get(day - 1);
+            slot.setEnvImpactModifier(modifier);
+        }
+        return true;
+    }
+
+    /**
+     * Resets the environmental impact modifier for a date to the standard rate (1.0).
+     * @param day the day number (1-30)
+     * @return true if successful, false if invalid day
+     */
+    public boolean resetEnvironmentalImpact(int day) {
+        if (day < 1 || day > 30)
+            return false;
+
+        DateSlot slot = dates.get(day - 1);
+        slot.setEnvImpactModifier(1.0);
+        return true;
+    }
 }
