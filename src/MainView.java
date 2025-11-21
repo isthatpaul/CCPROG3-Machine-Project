@@ -48,18 +48,32 @@ public class MainView extends JFrame {
     private Font loadRetroFont(float size) {
         try {
             InputStream is = getClass().getResourceAsStream("/resources/PressStart2P-Regular.ttf");
-            Font font = Font.createFont(Font.TRUETYPE_FONT, is);
-            return font.deriveFont(size);
+            if (is != null) {
+                Font font = Font.createFont(Font.TRUETYPE_FONT, is);
+                return font.deriveFont(size);
+            } else {
+                System.out.println("Retro font not found in resources, using fallback font.");
+            }
         } catch (Exception e) {
-            System.err.println("Retro font not loaded: " + e.getMessage());
-            return new Font("Monospaced", Font.BOLD, (int) size);
+            System.err.println("Error loading retro font: " + e.getMessage());
         }
+    
+    return new Font("Courier New", Font.BOLD, (int) size);
     }
 
     private void addSampleData() {
-        manager.addProperty("Eco-Apt 101", 1000.0, 1);
-        manager.addProperty("Sustainable Home", 1000.0, 2);
-        manager.bookProperty("Eco-Apt 101", "Test Guest", 5, 8);
+        try {
+            manager.addProperty("Eco-Apt 101", 1000.0, 1);
+            manager.addProperty("Sustainable Home", 1000.0, 2);
+            manager.addProperty("Green Resort", 1500.0, 3);
+            manager.addProperty("Eco Glamping", 2000.0, 4);
+            
+            if (!manager.bookProperty("Eco-Apt 101", "Test Guest", 5, 8)) {
+                System.out.println("Sample booking failed (might be conflicting dates)");
+            }
+        } catch (Exception e) {
+            System.err.println("Error adding sample data: " + e.getMessage());
+        }
     }
 
     // ======== BACKGROUND PANEL =========
@@ -285,7 +299,7 @@ public class MainView extends JFrame {
         detailsPanel.setBorder(BorderFactory.createTitledBorder("PROPERTY DETAILS & CALENDAR"));
         panel.add(detailsPanel, BorderLayout.CENTER);
 
-        JPanel actionsPanel = new JPanel(new GridLayout(1, 4, 8, 8));
+        JPanel actionsPanel = new JPanel(new GridLayout(2, 3, 8, 8));
         actionsPanel.setBackground(new Color(194,255,97,192));
 
         JButton backBtn = createStyledButton("BACK TO MAIN MENU", 14f);
@@ -294,11 +308,15 @@ public class MainView extends JFrame {
         JButton priceBtn = createStyledButton("UPDATE BASE PRICE", 14f);
         JButton bookBtn = createStyledButton("SIMULATE BOOKING", 14f);
         JButton removeBtn = createStyledButton("REMOVE PROPERTY", 14f);
+        JButton envImpactBtn = createStyledButton("MANAGE ENV IMPACT", 14f);
+        JButton viewReservationsBtn = createStyledButton("VIEW RESERVATIONS", 14f);
 
         actionsPanel.add(renameBtn);
         actionsPanel.add(priceBtn);
         actionsPanel.add(bookBtn);
         actionsPanel.add(removeBtn);
+        actionsPanel.add(envImpactBtn);
+        actionsPanel.add(viewReservationsBtn);
 
         JPanel bottomPanel = new JPanel(new BorderLayout());
         bottomPanel.setBackground(new Color(173,193,176,222));
@@ -321,6 +339,8 @@ public class MainView extends JFrame {
         priceBtn.addActionListener(createUpdatePriceListener(propertySelector, properties, detailsPanel));
         bookBtn.addActionListener(createBookingListener(propertySelector, properties, detailsPanel));
         removeBtn.addActionListener(createRemovePropertyListener(propertySelector, properties));
+        envImpactBtn.addActionListener(createEnvImpactListener(propertySelector, properties, detailsPanel));
+        viewReservationsBtn.addActionListener(createViewReservationsListener(propertySelector, properties));
 
         return panel;
     }
@@ -419,6 +439,90 @@ public class MainView extends JFrame {
         };
     }
 
+    private ActionListener createViewReservationsListener(JComboBox<String> selector, List<Property> properties) {
+        return e -> {
+            Property property = properties.get(selector.getSelectedIndex());
+            List<Reservation> reservations = property.getReservations();
+            
+            if (reservations.isEmpty()) {
+                showInfoDialog("No reservations for " + property.getPropertyName());
+                return;
+            }
+            
+            JDialog reservationsDialog = new JDialog(this, "Reservations for " + property.getPropertyName(), true);
+            reservationsDialog.setLayout(new BorderLayout());
+            reservationsDialog.setSize(600, 400);
+            reservationsDialog.setLocationRelativeTo(this);
+            
+            String[] columns = {"Guest", "Check-In", "Check-Out", "Nights", "Total Price"};
+            DefaultTableModel model = new DefaultTableModel(columns, 0) {
+                @Override
+                public boolean isCellEditable(int row, int column) { return false; }
+            };
+            
+            for (Reservation res : reservations) {
+                model.addRow(new Object[]{
+                    res.getGuestName(),
+                    res.getCheckInDay(),
+                    res.getCheckOutDay(),
+                    res.getNumberOfNights(),
+                    PRICE_FORMAT.format(res.getTotalPrice())
+                });
+            }
+            
+            JTable reservationsTable = new JTable(model);
+            reservationsTable.setFont(retroFont.deriveFont(14f));
+            reservationsTable.setRowHeight(30);
+            reservationsTable.getTableHeader().setFont(retroFont.deriveFont(12f));
+            
+            reservationsTable.addMouseListener(new java.awt.event.MouseAdapter() {
+                public void mouseClicked(java.awt.event.MouseEvent evt) {
+                    if (evt.getClickCount() == 2) {
+                        int row = reservationsTable.rowAtPoint(evt.getPoint());
+                        if (row >= 0) {
+                            showReservationDetails(reservations.get(row));
+                        }
+                    }
+                }
+            });
+            
+            reservationsDialog.add(new JScrollPane(reservationsTable), BorderLayout.CENTER);
+            
+            JButton closeBtn = createStyledButton("CLOSE", 14f);
+            closeBtn.addActionListener(evt -> reservationsDialog.dispose());
+            
+            JPanel buttonPanel = new JPanel();
+            buttonPanel.add(closeBtn);
+            reservationsDialog.add(buttonPanel, BorderLayout.SOUTH);
+            
+            reservationsDialog.setVisible(true);
+        };
+    }
+
+    private void showReservationDetails(Reservation reservation) {
+        StringBuilder details = new StringBuilder();
+        details.append("Guest: ").append(reservation.getGuestName()).append("\n");
+        details.append("Check-In: Day ").append(reservation.getCheckInDay()).append("\n");
+        details.append("Check-Out: Day ").append(reservation.getCheckOutDay()).append("\n");
+        details.append("Total Nights: ").append(reservation.getNumberOfNights()).append("\n");
+        details.append("Total Price: ").append(PRICE_FORMAT.format(reservation.getTotalPrice())).append("\n\n");
+        details.append("Nightly Breakdown:\n");
+        
+        for (int i = 0; i < reservation.getNumberOfNights(); i++) {
+            double nightlyRate = reservation.getNightlyRateByIndex(i);
+            details.append("  Night ").append(i + 1).append(": ").append(PRICE_FORMAT.format(nightlyRate)).append("\n");
+        }
+        
+        JTextArea textArea = new JTextArea(details.toString());
+        textArea.setFont(retroFont.deriveFont(14f));
+        textArea.setEditable(false);
+        
+        JScrollPane scrollPane = new JScrollPane(textArea);
+        scrollPane.setPreferredSize(new Dimension(400, 300));
+        
+        JOptionPane.showMessageDialog(this, scrollPane, "Reservation Details", JOptionPane.INFORMATION_MESSAGE);
+    }
+
     // PROPERTY CREATION - also uses main_menu_bg.png for cohesive style
     private JPanel createPropertyCreationPanel() {
         JPanel panel = new BackgroundPanel("/resources/main_menu_bg.png");
@@ -491,6 +595,96 @@ public class MainView extends JFrame {
         panel.add(southPanel, BorderLayout.SOUTH);
 
         return panel;
+    }
+
+    // ======== ENVIRONMENTAL IMPACT MANAGEMENT =========
+    private ActionListener createEnvImpactListener(JComboBox<String> selector, List<Property> properties, JPanel detailsPanel) {
+        return e -> {
+            Property property = properties.get(selector.getSelectedIndex());
+            
+            JDialog envDialog = new JDialog(this, "Manage Environmental Impact - " + property.getPropertyName(), true);
+            envDialog.setLayout(new BorderLayout());
+            envDialog.setSize(500, 400);
+            envDialog.setLocationRelativeTo(this);
+            
+            JPanel mainPanel = new JPanel(new BorderLayout());
+            mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+            
+            // Quick presets panel
+            JPanel presetsPanel = new JPanel(new GridLayout(2, 2, 5, 5));
+            presetsPanel.setBorder(BorderFactory.createTitledBorder("Quick Presets"));
+            
+            JButton earthDayBtn = createStyledButton("EARTH DAY (90%)", 12f);
+            JButton highPollutionBtn = createStyledButton("HIGH POLLUTION (110%)", 12f);
+            JButton resetAllBtn = createStyledButton("RESET ALL TO 100%", 12f);
+            JButton customRangeBtn = createStyledButton("CUSTOM RANGE", 12f);
+            
+            earthDayBtn.addActionListener(evt -> {
+                property.setEnvironmentalImpactRange(5, 5, 0.9);
+                property.setEnvironmentalImpactRange(22, 22, 0.9);
+                showSuccessDialog("Earth Day preset applied (Days 5 & 22 at 90%)");
+                refreshDetailsPanel(detailsPanel, property);
+                envDialog.dispose();
+            });
+            
+            highPollutionBtn.addActionListener(evt -> {
+                property.setEnvironmentalImpactRange(15, 15, 1.1);
+                property.setEnvironmentalImpactRange(30, 30, 1.1);
+                showSuccessDialog("High Pollution preset applied (Days 15 & 30 at 110%)");
+                refreshDetailsPanel(detailsPanel, property);
+                envDialog.dispose();
+            });
+            
+            resetAllBtn.addActionListener(evt -> {
+                for (int day = 1; day <= 30; day++) {
+                    property.resetEnvironmentalImpact(day);
+                }
+                showSuccessDialog("All days reset to 100% modifier");
+                refreshDetailsPanel(detailsPanel, property);
+                envDialog.dispose();
+            });
+            
+            customRangeBtn.addActionListener(evt -> {
+                envDialog.dispose();
+            });
+            
+            presetsPanel.add(earthDayBtn);
+            presetsPanel.add(highPollutionBtn);
+            presetsPanel.add(resetAllBtn);
+            presetsPanel.add(customRangeBtn);
+            
+            JTextArea modifiersArea = new JTextArea();
+            modifiersArea.setFont(retroFont.deriveFont(12f));
+            modifiersArea.setEditable(false);
+            updateModifiersDisplay(modifiersArea, property);
+            
+            JScrollPane scrollPane = new JScrollPane(modifiersArea);
+            scrollPane.setBorder(BorderFactory.createTitledBorder("Current Modifiers"));
+            
+            mainPanel.add(presetsPanel, BorderLayout.NORTH);
+            mainPanel.add(scrollPane, BorderLayout.CENTER);
+            
+            JButton closeBtn = createStyledButton("CLOSE", 14f);
+            closeBtn.addActionListener(evt -> envDialog.dispose());
+            
+            envDialog.add(mainPanel, BorderLayout.CENTER);
+            envDialog.add(closeBtn, BorderLayout.SOUTH);
+            envDialog.setVisible(true);
+        };
+    }
+
+    private void updateModifiersDisplay(JTextArea area, Property property) {
+        StringBuilder sb = new StringBuilder();
+        for (int day = 1; day <= 30; day++) {
+            double modifier = property.getDates().get(day - 1).getEnvImpactModifier();
+            if (modifier != 1.0) {
+                sb.append("Day ").append(day).append(": ").append(MODIFIER_FORMAT.format(modifier * 100)).append("%\n");
+            }
+        }
+        if (sb.length() == 0) {
+            sb.append("All days at standard rate (100%)");
+        }
+        area.setText(sb.toString());
     }
 
     // CALENDAR PANEL - uses main_menu_bg.png for cohesive game vibe
@@ -657,4 +851,26 @@ public class MainView extends JFrame {
         @Override
         public int getIconHeight() { return SIZE; }
     }
+
+    // ======== DIALOG MANAGEMENT =========
+    private void showErrorDialog(String message) {
+        JOptionPane.showMessageDialog(this, message, "ERROR", JOptionPane.ERROR_MESSAGE);
+    }
+
+    private void showSuccessDialog(String message) {
+        JOptionPane.showMessageDialog(this, message, "SUCCESS", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private void showInfoDialog(String message) {
+        JOptionPane.showMessageDialog(this, message, "INFO", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    // ======== PANEL MANAGEMENT =========
+    private void refreshDetailsPanel(JPanel detailsPanel, Property property) {
+        detailsPanel.removeAll();
+        detailsPanel.add(createCalendarPanel(property), BorderLayout.CENTER);
+        detailsPanel.revalidate();
+        detailsPanel.repaint();
+    }
+
 }
