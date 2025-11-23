@@ -15,6 +15,8 @@ import java.util.List;
 public class MainView extends JFrame {
 
     private final PropertyManager manager;
+    private final PropertyRepository repository;
+    private final BookingService bookingService;
     private final CardLayout cardLayout;
     private final JPanel mainPanel;
 
@@ -24,7 +26,12 @@ public class MainView extends JFrame {
 
     public MainView() {
         super("Green Property Exchange System (MCO2)");
+
+        // Repository / service wiring (Dependency Inversion)
         this.manager = new PropertyManager();
+        this.repository = manager; // PropertyManager implements PropertyRepository
+        this.bookingService = new BookingServiceImpl(repository, new DefaultPriceStrategy());
+
         this.cardLayout = new CardLayout();
         this.mainPanel = new JPanel(cardLayout);
         this.retroFont = loadRetroFont(24f);
@@ -57,8 +64,8 @@ public class MainView extends JFrame {
         } catch (Exception e) {
             System.err.println("Error loading retro font: " + e.getMessage());
         }
-    
-    return new Font("Courier New", Font.BOLD, (int) size);
+
+        return new Font("Courier New", Font.BOLD, (int) size);
     }
 
     private void addSampleData() {
@@ -67,8 +74,9 @@ public class MainView extends JFrame {
             manager.addProperty("Sustainable Home", 1000.0, 2);
             manager.addProperty("Green Resort", 1500.0, 3);
             manager.addProperty("Eco Glamping", 2000.0, 4);
-            
-            if (!manager.bookProperty("Eco-Apt 101", "Test Guest", 5, 8)) {
+
+            // Use service layer for bookings so pricing/validation is centralized
+            if (!bookingService.book("Eco-Apt 101", "Test Guest", GuestTier.REGULAR, 5, 8)) {
                 System.out.println("Sample booking failed (might be conflicting dates)");
             }
         } catch (Exception e) {
@@ -340,7 +348,7 @@ public class MainView extends JFrame {
         bookBtn.addActionListener(createBookingListener(propertySelector, properties, detailsPanel));
         removeBtn.addActionListener(createRemovePropertyListener(propertySelector, properties));
         envImpactBtn.addActionListener(createEnvImpactListener(propertySelector, properties, detailsPanel));
-        viewReservationsBtn.addActionListener(createViewReservationsListener(propertySelector, properties));
+        viewReservationsBtn.addActionListener(createViewReservationsListener(propertySelector, properties, detailsPanel));
 
         return panel;
     }
@@ -366,10 +374,16 @@ public class MainView extends JFrame {
     private ActionListener createBookingListener(JComboBox<String> selector, List<Property> properties, JPanel detailsPanel) {
         return e -> {
             Property p = properties.get(selector.getSelectedIndex());
-            JPanel bookingPanel = new JPanel(new GridLayout(4, 2));
+            JPanel bookingPanel = new JPanel(new GridLayout(5, 2));
             bookingPanel.add(new JLabel("GUEST NAME:")).setFont(retroFont.deriveFont(16f));
             JTextField guestField = new JTextField(10);
             bookingPanel.add(guestField);
+
+            bookingPanel.add(new JLabel("GUEST TIER:")).setFont(retroFont.deriveFont(16f));
+            String[] tiers = {GuestTier.REGULAR.toString(), GuestTier.SILVER.toString(), GuestTier.GOLD.toString(), GuestTier.PLATINUM.toString()};
+            JComboBox<String> tierSelector = new JComboBox<>(tiers);
+            bookingPanel.add(tierSelector);
+
             bookingPanel.add(new JLabel("CHECK-IN DAY (1-30):")).setFont(retroFont.deriveFont(16f));
             JTextField inField = new JTextField(5);
             bookingPanel.add(inField);
@@ -385,7 +399,11 @@ public class MainView extends JFrame {
                     String guest = guestField.getText().trim();
                     int checkIn = Integer.parseInt(inField.getText().trim());
                     int checkOut = Integer.parseInt(outField.getText().trim());
-                    if (p.addReservation(guest, checkIn, checkOut)) {
+                    int tierIndex = tierSelector.getSelectedIndex();
+                    GuestTier tier = GuestTier.values()[tierIndex];
+
+                    // Use service to perform booking (validations + pricing)
+                    if (bookingService.book(p.getPropertyName(), guest, tier, checkIn, checkOut)) {
                         JOptionPane.showMessageDialog(this, "BOOKING CONFIRMED!", "SUCCESS", JOptionPane.INFORMATION_MESSAGE);
                         detailsPanel.removeAll();
                         detailsPanel.add(createCalendarPanel(p), BorderLayout.CENTER);
@@ -439,88 +457,102 @@ public class MainView extends JFrame {
         };
     }
 
-    private ActionListener createViewReservationsListener(JComboBox<String> selector, List<Property> properties) {
+    private ActionListener createViewReservationsListener(JComboBox<String> selector, List<Property> properties, JPanel detailsPanel) {
         return e -> {
             Property property = properties.get(selector.getSelectedIndex());
-            List<Reservation> reservations = property.getReservations();
-            
+            // Prefer service to fetch reservations (keeps logic centralized)
+            List<Reservation> reservations = bookingService.getReservations(property.getPropertyName());
+
             if (reservations.isEmpty()) {
                 showInfoDialog("No reservations for " + property.getPropertyName());
                 return;
             }
-            
-            JDialog reservationsDialog = new JDialog(this, "Reservations for " + property.getPropertyName(), true);
-            reservationsDialog.setLayout(new BorderLayout());
-            reservationsDialog.setSize(600, 400);
-            reservationsDialog.setLocationRelativeTo(this);
-            
-            String[] columns = {"Guest", "Check-In", "Check-Out", "Nights", "Total Price"};
-            DefaultTableModel model = new DefaultTableModel(columns, 0) {
-                @Override
-                public boolean isCellEditable(int row, int column) { return false; }
-            };
-            
-            for (Reservation res : reservations) {
-                model.addRow(new Object[]{
-                    res.getGuestName(),
-                    res.getCheckInDay(),
-                    res.getCheckOutDay(),
-                    res.getNumberOfNights(),
-                    PRICE_FORMAT.format(res.getTotalPrice())
-                });
-            }
-            
-            JTable reservationsTable = new JTable(model);
-            reservationsTable.setFont(retroFont.deriveFont(14f));
-            reservationsTable.setRowHeight(30);
-            reservationsTable.getTableHeader().setFont(retroFont.deriveFont(12f));
-            
-            reservationsTable.addMouseListener(new java.awt.event.MouseAdapter() {
-                public void mouseClicked(java.awt.event.MouseEvent evt) {
-                    if (evt.getClickCount() == 2) {
-                        int row = reservationsTable.rowAtPoint(evt.getPoint());
-                        if (row >= 0) {
-                            showReservationDetails(reservations.get(row));
-                        }
+
+            DefaultListModel<Reservation> model = new DefaultListModel<>();
+            for (Reservation r : reservations) model.addElement(r);
+
+            JList<Reservation> list = new JList<>(model);
+            list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+            list.setFont(retroFont.deriveFont(12f));
+
+            JScrollPane scroll = new JScrollPane(list);
+            scroll.setPreferredSize(new Dimension(480, 220));
+
+            JButton detailsBtn = createStyledButton("VIEW DETAILS", 14f);
+            JButton removeBtn = createStyledButton("REMOVE RESERVATION", 14f);
+            JButton closeBtn = createStyledButton("CLOSE", 14f);
+
+            JPanel btns = new JPanel();
+            btns.add(detailsBtn);
+            btns.add(removeBtn);
+            btns.add(closeBtn);
+
+            JDialog dialog = new JDialog(this, "Reservations for " + property.getPropertyName(), true);
+            dialog.setLayout(new BorderLayout(8,8));
+            dialog.add(scroll, BorderLayout.CENTER);
+            dialog.add(btns, BorderLayout.SOUTH);
+            dialog.pack();
+            dialog.setLocationRelativeTo(this);
+
+            detailsBtn.addActionListener(ae -> {
+                Reservation sel = list.getSelectedValue();
+                if (sel == null) {
+                    JOptionPane.showMessageDialog(dialog, "SELECT A RESERVATION FIRST.", "INFO", JOptionPane.INFORMATION_MESSAGE);
+                    return;
+                }
+                showReservationDetails(sel);
+            });
+
+            removeBtn.addActionListener(ae -> {
+                Reservation sel = list.getSelectedValue();
+                if (sel == null) {
+                    JOptionPane.showMessageDialog(dialog, "SELECT A RESERVATION FIRST.", "INFO", JOptionPane.INFORMATION_MESSAGE);
+                    return;
+                }
+                int confirm = JOptionPane.showConfirmDialog(dialog, "REMOVE SELECTED RESERVATION?", "CONFIRM", JOptionPane.YES_NO_OPTION);
+                if (confirm == JOptionPane.YES_OPTION) {
+                    boolean ok = bookingService.removeReservation(property.getPropertyName(), sel);
+                    if (ok) {
+                        model.removeElement(sel);
+                        // Refresh property panel so calendar updates
+                        mainPanel.add(createPropertyManagementPanel(), "MANAGE_PROPERTY_REFRESH");
+                        cardLayout.show(mainPanel, "MANAGE_PROPERTY_REFRESH");
+                        JOptionPane.showMessageDialog(dialog, "RESERVATION REMOVED.", "SUCCESS", JOptionPane.INFORMATION_MESSAGE);
+                    } else {
+                        JOptionPane.showMessageDialog(dialog, "FAILED TO REMOVE RESERVATION.", "ERROR", JOptionPane.ERROR_MESSAGE);
                     }
                 }
             });
-            
-            reservationsDialog.add(new JScrollPane(reservationsTable), BorderLayout.CENTER);
-            
-            JButton closeBtn = createStyledButton("CLOSE", 14f);
-            closeBtn.addActionListener(evt -> reservationsDialog.dispose());
-            
-            JPanel buttonPanel = new JPanel();
-            buttonPanel.add(closeBtn);
-            reservationsDialog.add(buttonPanel, BorderLayout.SOUTH);
-            
-            reservationsDialog.setVisible(true);
+
+            closeBtn.addActionListener(ae -> dialog.dispose());
+
+            dialog.setVisible(true);
         };
     }
 
     private void showReservationDetails(Reservation reservation) {
-        StringBuilder details = new StringBuilder();
-        details.append("Guest: ").append(reservation.getGuestName()).append("\n");
-        details.append("Check-In: Day ").append(reservation.getCheckInDay()).append("\n");
-        details.append("Check-Out: Day ").append(reservation.getCheckOutDay()).append("\n");
-        details.append("Total Nights: ").append(reservation.getNumberOfNights()).append("\n");
-        details.append("Total Price: ").append(PRICE_FORMAT.format(reservation.getTotalPrice())).append("\n\n");
-        details.append("Nightly Breakdown:\n");
-        
+        StringBuilder sb = new StringBuilder();
+        sb.append("Guest: ").append(reservation.getGuestName()).append("\n");
+        sb.append("Tier: ").append(reservation.getGuestTier()).append("\n");
+        sb.append("Check-in: ").append(reservation.getCheckInDay()).append("\n");
+        sb.append("Check-out: ").append(reservation.getCheckOutDay()).append("\n");
+        sb.append("Nights: ").append(reservation.getNumberOfNights()).append("\n");
+        sb.append("BREAKDOWN (Before -> After Discount):\n");
         for (int i = 0; i < reservation.getNumberOfNights(); i++) {
-            double nightlyRate = reservation.getNightlyRateByIndex(i);
-            details.append("  Night ").append(i + 1).append(": ").append(PRICE_FORMAT.format(nightlyRate)).append("\n");
+            double before = reservation.getNightlyRateBeforeDiscountByIndex(i);
+            double after = reservation.getNightlyRateByIndex(i);
+            sb.append(String.format("Night %d: %s -> %s\n", i+1, PRICE_FORMAT.format(before), PRICE_FORMAT.format(after)));
         }
-        
-        JTextArea textArea = new JTextArea(details.toString());
+        sb.append("\nTOTAL: ").append(PRICE_FORMAT.format(reservation.getTotalPrice()));
+
+        JTextArea textArea = new JTextArea(sb.toString());
         textArea.setFont(retroFont.deriveFont(14f));
         textArea.setEditable(false);
-        
+
         JScrollPane scrollPane = new JScrollPane(textArea);
-        scrollPane.setPreferredSize(new Dimension(400, 300));
-        
-        JOptionPane.showMessageDialog(this, scrollPane, "Reservation Details", JOptionPane.INFORMATION_MESSAGE);
+        scrollPane.setPreferredSize(new Dimension(480, 320));
+
+        JOptionPane.showMessageDialog(this, scrollPane, "RESERVATION DETAILS", JOptionPane.INFORMATION_MESSAGE);
     }
 
     // PROPERTY CREATION - also uses main_menu_bg.png for cohesive style
@@ -601,24 +633,24 @@ public class MainView extends JFrame {
     private ActionListener createEnvImpactListener(JComboBox<String> selector, List<Property> properties, JPanel detailsPanel) {
         return e -> {
             Property property = properties.get(selector.getSelectedIndex());
-            
+
             JDialog envDialog = new JDialog(this, "Manage Environmental Impact - " + property.getPropertyName(), true);
             envDialog.setLayout(new BorderLayout());
             envDialog.setSize(500, 400);
             envDialog.setLocationRelativeTo(this);
-            
+
             JPanel mainPanel = new JPanel(new BorderLayout());
             mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-            
+
             // Quick presets panel
             JPanel presetsPanel = new JPanel(new GridLayout(2, 2, 5, 5));
             presetsPanel.setBorder(BorderFactory.createTitledBorder("Quick Presets"));
-            
+
             JButton earthDayBtn = createStyledButton("EARTH DAY (90%)", 12f);
             JButton highPollutionBtn = createStyledButton("HIGH POLLUTION (110%)", 12f);
             JButton resetAllBtn = createStyledButton("RESET ALL TO 100%", 12f);
             JButton customRangeBtn = createStyledButton("CUSTOM RANGE", 12f);
-            
+
             earthDayBtn.addActionListener(evt -> {
                 property.setEnvironmentalImpactRange(5, 5, 0.9);
                 property.setEnvironmentalImpactRange(22, 22, 0.9);
@@ -626,7 +658,7 @@ public class MainView extends JFrame {
                 refreshDetailsPanel(detailsPanel, property);
                 envDialog.dispose();
             });
-            
+
             highPollutionBtn.addActionListener(evt -> {
                 property.setEnvironmentalImpactRange(15, 15, 1.1);
                 property.setEnvironmentalImpactRange(30, 30, 1.1);
@@ -634,7 +666,7 @@ public class MainView extends JFrame {
                 refreshDetailsPanel(detailsPanel, property);
                 envDialog.dispose();
             });
-            
+
             resetAllBtn.addActionListener(evt -> {
                 for (int day = 1; day <= 30; day++) {
                     property.resetEnvironmentalImpact(day);
@@ -643,30 +675,55 @@ public class MainView extends JFrame {
                 refreshDetailsPanel(detailsPanel, property);
                 envDialog.dispose();
             });
-            
+
+            // Custom range: open a small dialog for start/end/modifier
             customRangeBtn.addActionListener(evt -> {
-                envDialog.dispose();
+                JPanel input = new JPanel(new GridLayout(3, 2, 5, 5));
+                JTextField startField = new JTextField(4);
+                JTextField endField = new JTextField(4);
+                JTextField modField = new JTextField("1.00", 6);
+
+                input.add(new JLabel("Start day (1-30):")); input.add(startField);
+                input.add(new JLabel("End day (1-30):")); input.add(endField);
+                input.add(new JLabel("Modifier (0.8 - 1.2):")); input.add(modField);
+
+                int res = JOptionPane.showConfirmDialog(envDialog, input, "Custom Range", JOptionPane.OK_CANCEL_OPTION);
+                if (res == JOptionPane.OK_OPTION) {
+                    try {
+                        int s = Integer.parseInt(startField.getText().trim());
+                        int t = Integer.parseInt(endField.getText().trim());
+                        double m = Double.parseDouble(modField.getText().trim());
+                        if (!property.setEnvironmentalImpactRange(s, t, m)) {
+                            throw new IllegalArgumentException("Invalid range or modifier");
+                        }
+                        showSuccessDialog(String.format("Modifier set for days %d-%d to %s", s, t, MODIFIER_FORMAT.format(m)));
+                        refreshDetailsPanel(detailsPanel, property);
+                        envDialog.dispose();
+                    } catch (Exception ex) {
+                        showErrorDialog("Invalid input: " + ex.getMessage());
+                    }
+                }
             });
-            
+
             presetsPanel.add(earthDayBtn);
             presetsPanel.add(highPollutionBtn);
             presetsPanel.add(resetAllBtn);
             presetsPanel.add(customRangeBtn);
-            
+
             JTextArea modifiersArea = new JTextArea();
             modifiersArea.setFont(retroFont.deriveFont(12f));
             modifiersArea.setEditable(false);
             updateModifiersDisplay(modifiersArea, property);
-            
+
             JScrollPane scrollPane = new JScrollPane(modifiersArea);
             scrollPane.setBorder(BorderFactory.createTitledBorder("Current Modifiers"));
-            
+
             mainPanel.add(presetsPanel, BorderLayout.NORTH);
             mainPanel.add(scrollPane, BorderLayout.CENTER);
-            
+
             JButton closeBtn = createStyledButton("CLOSE", 14f);
             closeBtn.addActionListener(evt -> envDialog.dispose());
-            
+
             envDialog.add(mainPanel, BorderLayout.CENTER);
             envDialog.add(closeBtn, BorderLayout.SOUTH);
             envDialog.setVisible(true);
@@ -677,7 +734,7 @@ public class MainView extends JFrame {
         StringBuilder sb = new StringBuilder();
         for (int day = 1; day <= 30; day++) {
             double modifier = property.getDates().get(day - 1).getEnvImpactModifier();
-            if (modifier != 1.0) {
+            if (Math.abs(modifier - 1.0) > 1e-9) {
                 sb.append("Day ").append(day).append(": ").append(MODIFIER_FORMAT.format(modifier * 100)).append("%\n");
             }
         }
@@ -746,10 +803,17 @@ public class MainView extends JFrame {
                 double mod = slot.getEnvImpactModifier();
 
                 if (slot.isBooked()) {
+                    // Show booked color and also display guest name (short) in tooltip
                     setBackground(new Color(100, 85, 53)); // Brown, match vines
+                    if (slot.getReservation() != null) {
+                        String guest = slot.getReservation().getGuestName();
+                        setToolTipText("Booked by: " + guest);
+                    } else {
+                        setToolTipText("BOOKED");
+                    }
                 } else if (mod >= 0.80 && mod <= 0.89) {
                     setBackground(new Color(194, 255, 97)); // Neon leaf
-                } else if (mod == 1.0) {
+                } else if (Math.abs(mod - 1.0) < 1e-9) {
                     setBackground(new Color(228, 240, 211, 222)); // Soft menu bg
                 } else if (mod >= 1.01 && mod <= 1.20) {
                     setBackground(new Color(255, 240, 58)); // Arcade yellow
@@ -758,6 +822,34 @@ public class MainView extends JFrame {
                 }
                 setForeground(new Color(36, 63, 41));
                 return this;
+            }
+        });
+
+        // Add mouse click to show date details
+        calendarTable.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                int row = calendarTable.rowAtPoint(e.getPoint());
+                int col = calendarTable.columnAtPoint(e.getPoint());
+                if (row >= 0 && col >= 0) {
+                    int day = row * 7 + col + 1;
+                    if (day > 30) return;
+                    DateSlot slot = property.getDates().get(day - 1);
+                    StringBuilder msg = new StringBuilder();
+                    msg.append("Day ").append(day).append("\n");
+                    msg.append("Env Modifier: ").append(MODIFIER_FORMAT.format(slot.getEnvImpactModifier())).append("\n");
+                    msg.append("Final Rate: ").append(PRICE_FORMAT.format(property.calculateFinalDailyRate(day))).append("\n");
+                    msg.append("Status: ").append(slot.isBooked() ? "BOOKED" : "AVAILABLE").append("\n");
+                    if (slot.isBooked() && slot.getReservation() != null) {
+                        Reservation r = slot.getReservation();
+                        msg.append("\nReservation Details:\n");
+                        msg.append("Guest: ").append(r.getGuestName()).append(" (").append(r.getGuestTier()).append(")\n");
+                        msg.append("Check-in: ").append(r.getCheckInDay()).append("\n");
+                        msg.append("Check-out: ").append(r.getCheckOutDay()).append("\n");
+                        msg.append("Total: ").append(PRICE_FORMAT.format(r.getTotalPrice())).append("\n");
+                    }
+                    JOptionPane.showMessageDialog(MainView.this, msg.toString(), "DATE DETAILS", JOptionPane.INFORMATION_MESSAGE);
+                }
             }
         });
 
@@ -791,8 +883,12 @@ public class MainView extends JFrame {
         gbc.gridx = 1; panel.add(modifierField, gbc);
 
         JButton updateBtn = createStyledButton("UPDATE MODIFIER", 14f);
-        gbc.gridx = 2; gbc.gridy = 1; gbc.gridwidth = 2; gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.gridx = 2; gbc.gridy = 1; gbc.gridwidth = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
         panel.add(updateBtn, gbc);
+
+        JButton checkRangeBtn = createStyledButton("CHECK RANGE COUNTS", 12f);
+        gbc.gridx = 3; gbc.gridy = 1; gbc.gridwidth = 1;
+        panel.add(checkRangeBtn, gbc);
 
         JPanel legendPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         legendPanel.setBackground(new Color(173,193,176,220));
@@ -827,6 +923,25 @@ public class MainView extends JFrame {
                 container.revalidate();
                 container.repaint();
 
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "ERROR: " + ex.getMessage(), "INPUT ERROR", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        checkRangeBtn.addActionListener(e -> {
+            try {
+                int start = Integer.parseInt(startDayField.getText().trim());
+                int end = Integer.parseInt(endDayField.getText().trim());
+                if (start < 1 || end > 30 || start > end) {
+                    throw new IllegalArgumentException("INVALID DAY RANGE.");
+                }
+                int booked = property.countBookedDatesInRange(start, end);
+                int available = property.countAvailableDatesInRange(start, end);
+                JOptionPane.showMessageDialog(this,
+                        String.format("Days %d-%d => BOOKED: %d | AVAILABLE: %d", start, end, booked, available),
+                        "RANGE COUNTS", JOptionPane.INFORMATION_MESSAGE);
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(this, "ENTER VALID NUMBERS FOR START AND END DAYS.", "INPUT ERROR", JOptionPane.ERROR_MESSAGE);
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, "ERROR: " + ex.getMessage(), "INPUT ERROR", JOptionPane.ERROR_MESSAGE);
             }
@@ -872,5 +987,4 @@ public class MainView extends JFrame {
         detailsPanel.revalidate();
         detailsPanel.repaint();
     }
-
 }

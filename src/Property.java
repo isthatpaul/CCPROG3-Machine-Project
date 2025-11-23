@@ -3,17 +3,23 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The abstract Property class serves as the base for all property types in the system.
- * It implements common property management logic and defines abstract methods for polymorphism.
- * @author Crisologo, Lim Un
- * @version 5.0 (Updated for MCO2)
+ * Abstract base class for different property types.
+ * Holds the collection of DateSlot instances (30 days) and property reservations.
+ *
+ * Subclasses provide the type-specific multiplier by implementing getRateMultiplier().
  */
-public abstract class Property {
+public abstract class Property implements PropertyInternalAccessor {
     private String propertyName;
     private double basePrice;
-    private List<DateSlot> dates;
-    private List<Reservation> reservations;
+    private final List<DateSlot> dates;
+    private final List<Reservation> reservations;
 
+    /**
+     * Constructs a Property with the given name and base price.
+     *
+     * @param name property name
+     * @param basePrice base price per night
+     */
     public Property(String name, double basePrice) {
         this.propertyName = name;
         this.basePrice = basePrice;
@@ -21,27 +27,31 @@ public abstract class Property {
         this.reservations = new ArrayList<>();
 
         for (int day = 1; day <= 30; day++) {
-            // DateSlot now created without a price
             dates.add(new DateSlot(day));
         }
     }
 
-    // --- ABSTRACT METHODS FOR POLYMORPHISM ---
-
-    /** Returns the unique rate multiplier for the specific property type (e.g., 1.20 for Sustainable House). */
+    /**
+     * Returns the rate multiplier specific to the concrete property type
+     * (e.g., 1.0 for EcoApartment, 1.20 for SustainableHouse).
+     *
+     * @return type multiplier
+     */
     protected abstract double getRateMultiplier();
 
-    /** Returns the display name of the property type. */
+    /**
+     * Returns the display name of the property type.
+     *
+     * @return property type name
+     */
     public abstract String getPropertyType();
 
-    // --- NEW MCO2 LOGIC ---
-
     /**
-     * Calculates the final nightly rate for a specific day, factoring in the
-     * property type multiplier and the day's environmental impact modifier.
-     * Final Rate = Base Price * Type Multiplier * Env Modifier
-     * @param day the day number (1–30)
-     * @return the final calculated price per night
+     * Calculates the final nightly rate for a specific day:
+     * final = basePrice * typeMultiplier * date.envImpactModifier
+     *
+     * @param day day number (1..30)
+     * @return final price per night, or 0.0 for invalid day
      */
     public double calculateFinalDailyRate(int day) {
         if (day < 1 || day > 30) {
@@ -51,85 +61,45 @@ public abstract class Property {
         return basePrice * getRateMultiplier() * slot.getEnvImpactModifier();
     }
 
-    // --- UPDATED MCO1 METHODS ---
-
-    /**
-     * Adds a new reservation. The reservation's price is calculated dynamically
-     * based on each reserved day's modifier.
-     */
-    public boolean addReservation(String guestName, int checkIn, int checkOut) {
-        if (checkOut == 1 || checkIn == 30 || checkIn < 1 || checkOut > 30 || checkIn >= checkOut) {
-            // Simplified error check for display, full logic is in MCO1
-            // In a GUI, this validation would happen before calling the method.
-            return false;
-        }
-
-        for (Reservation r : reservations) {
-            int existingIn = r.getCheckInDay();
-            int existingOut = r.getCheckOutDay();
-            if (checkIn < existingOut && checkOut > existingIn) {
-                return false; // Conflict found
-            }
-        }
-
-        // 1. Calculate the nightly prices for the reservation
-        List<Double> nightlyRates = new ArrayList<>();
-        for (int d = checkIn; d < checkOut; d++) {
-            nightlyRates.add(calculateFinalDailyRate(d));
-        }
-
-        // 2. Create the Reservation with dynamic rates
-        Reservation newRes = new Reservation(guestName, checkIn, checkOut, nightlyRates);
-        reservations.add(newRes);
-
-        // 3. Book the DateSlot objects
-        for (int d = checkIn; d < checkOut; d++) {
-            dates.get(d - 1).book(newRes);
-        }
-
-        return true;
-    }
-
-    /**
-     * Updates the base price if there are no existing reservations.
-     * The loop updating DateSlot prices is removed as DateSlot no longer stores price.
-     */
-    public boolean updateBasePrice(double newPrice) {
-        if (newPrice < 100.0) {
-            return false;
-        }
-        if (!reservations.isEmpty()) {
-            return false;
-        }
-
-        this.basePrice = newPrice;
-        return true;
-    }
-
-    // --- EXISTING MCO1 METHODS (Getters) ---
-
+    /** @return property name */
     public String getPropertyName() {
         return propertyName;
     }
 
+    /** @return base price */
     public double getBasePrice() {
         return basePrice;
     }
 
+    /** @return direct access to DateSlot list (owned by property) */
     public List<DateSlot> getDates() {
         return dates;
     }
 
+    /**
+     * Returns a defensive copy of the reservations list to avoid external mutation.
+     *
+     * @return list of reservations
+     */
     public List<Reservation> getReservations() {
-        return reservations;
+        return new ArrayList<>(reservations);
     }
 
-    // Renames the property.
+    /**
+     * Rename the property.
+     *
+     * @param newName new name to set
+     */
     public void setPropertyName(String newName) {
         this.propertyName = newName;
     }
 
-    // Removes a reservation
+    /**
+     * Remove a reservation and cancel booked DateSlots.
+     *
+     * @param reservation reservation to remove
+     * @return true if removed, false if reservation not found
+     */
     public boolean removeReservation(Reservation reservation) {
         if (!reservations.contains(reservation)) {
             return false;
@@ -143,12 +113,12 @@ public abstract class Property {
         return true;
     }
 
-    // Returns true if the property has no active reservations.
+    /** @return true if property has no active reservations */
     public boolean canBeRemoved() {
         return reservations.isEmpty();
     }
 
-    // Returns the total earnings from all reservations.
+    /** @return total earnings from all reservations */
     public double getTotalEarnings() {
         double total = 0.0;
         for (Reservation r : reservations) {
@@ -157,7 +127,7 @@ public abstract class Property {
         return total;
     }
 
-    // Returns how many days are still available for booking.
+    /** @return number of available dates (not booked) */
     public int countAvailableDates() {
         int count = 0;
         for (DateSlot date : dates) {
@@ -169,11 +139,46 @@ public abstract class Property {
     }
 
     /**
-     * Determines the color to use for displaying the environmental impact level of a date.
-     * @param day the day number (1-30)
-     * @return Color.GREEN for reduced impact (80-89% of base price)
-     *         Color.WHITE for standard impact (100% of base price)
-     *         Color.YELLOW for increased impact (101-120% of base price)
+     * Count booked dates in an inclusive range. Bounds are clamped to [1,30].
+     *
+     * @param startDay range start (inclusive)
+     * @param endDay range end (inclusive)
+     * @return number of booked days in range
+     */
+    public int countBookedDatesInRange(int startDay, int endDay) {
+        if (startDay < 1) startDay = 1;
+        if (endDay > 30) endDay = 30;
+        if (startDay > endDay) return 0;
+        int count = 0;
+        for (int d = startDay; d <= endDay; d++) {
+            if (!dates.get(d - 1).isAvailable()) count++;
+        }
+        return count;
+    }
+
+    /**
+     * Count available dates in an inclusive range. Bounds are clamped to [1,30].
+     *
+     * @param startDay range start (inclusive)
+     * @param endDay range end (inclusive)
+     * @return number of available days in range
+     */
+    public int countAvailableDatesInRange(int startDay, int endDay) {
+        if (startDay < 1) startDay = 1;
+        if (endDay > 30) endDay = 30;
+        if (startDay > endDay) return 0;
+        int count = 0;
+        for (int d = startDay; d <= endDay; d++) {
+            if (dates.get(d - 1).isAvailable()) count++;
+        }
+        return count;
+    }
+
+    /**
+     * Returns a color representing the environmental impact level for UI rendering.
+     *
+     * @param day day number (1..30)
+     * @return Color instance representing impact
      */
     public Color getEnvironmentalImpactColor(int day) {
         if (day < 1 || day > 30) return Color.WHITE;
@@ -181,22 +186,24 @@ public abstract class Property {
         DateSlot slot = dates.get(day - 1);
         double modifier = slot.getEnvImpactModifier();
 
+        final double EPS = 1e-9;
         if (modifier >= 0.80 && modifier <= 0.89) {
-            return Color.GREEN;      // Reduced environmental impact (80-89%)
-        } else if (modifier == 1.0) {
-            return Color.WHITE;      // Standard impact (100%)
+            return Color.GREEN;
+        } else if (Math.abs(modifier - 1.0) < EPS) {
+            return Color.WHITE;
         } else if (modifier >= 1.01 && modifier <= 1.20) {
-            return Color.YELLOW;     // Increased impact (101-120%)
+            return Color.YELLOW;
         } else {
-            return Color.WHITE;      // Default to white for any other cases
+            return Color.WHITE;
         }
     }
 
     /**
-     * Sets the environmental impact modifier for a specific date.
-     * @param day the day number (1-30)
-     * @param modifier the environmental impact modifier (0.8 to 1.2)
-     * @return true if successful, false if invalid day or modifier
+     * Set the environmental impact modifier for a single date.
+     *
+     * @param day day number
+     * @param modifier modifier in [0.8,1.2]
+     * @return true if set successfully
      */
     public boolean setEnvironmentalImpact(int day, double modifier) {
         if (day < 1 || day > 30) return false;
@@ -208,11 +215,12 @@ public abstract class Property {
     }
 
     /**
-     * Sets environmental impact modifiers for a range of dates.
+     * Set the environmental impact modifier for a range of dates.
+     *
      * @param startDay start day (inclusive)
      * @param endDay end day (inclusive)
-     * @param modifier the environmental impact modifier (0.8 to 1.2)
-     * @return true if successful, false if invalid range or modifier
+     * @param modifier modifier in [0.8,1.2]
+     * @return true if updated successfully
      */
     public boolean setEnvironmentalImpactRange(int startDay, int endDay, double modifier) {
         if (startDay < 1 || endDay > 30 || startDay > endDay) return false;
@@ -226,16 +234,42 @@ public abstract class Property {
     }
 
     /**
-     * Resets the environmental impact modifier for a date to the standard rate (1.0).
-     * @param day the day number (1-30)
-     * @return true if successful, false if invalid day
+     * Reset a date to the standard environmental modifier (1.0).
+     *
+     * @param day day to reset
+     * @return true if successful
      */
     public boolean resetEnvironmentalImpact(int day) {
-        if (day < 1 || day > 30)
-            return false;
+        if (day < 1 || day > 30) return false;
 
-        DateSlot slot = dates.get(day - 1);
-        slot.setEnvImpactModifier(1.0);
+        dates.get(day - 1).setEnvImpactModifier(1.0);
+        return true;
+    }
+
+    /**
+     * Controlled internal method used by BookingServiceImpl to persist reservations
+     * and book the corresponding date slots. Keeps the mutation of internal lists inside Property.
+     *
+     * @param reservation reservation to add
+     */
+    @Override
+    public void addReservationDirect(Reservation reservation) {
+        for (int d = reservation.getCheckInDay(); d < reservation.getCheckOutDay(); d++) {
+            dates.get(d - 1).book(reservation);
+        }
+        reservations.add(reservation);
+    }
+
+    /**
+     * Update the base price. Only allowed when there are no active reservations and price >= 100.
+     *
+     * @param newPrice new base price
+     * @return true if update succeeded
+     */
+    public boolean updateBasePrice(double newPrice) {
+        if (newPrice < 100.0) return false;
+        if (!reservations.isEmpty()) return false;
+        this.basePrice = newPrice;
         return true;
     }
 }
