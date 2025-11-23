@@ -221,59 +221,47 @@ public class MainView extends JFrame {
 
     private JPanel createMainMenuPanel() {
         BackgroundPanel panel = new BackgroundPanel("/resources/main_menu_bg.png");
-        panel.setLayout(null);
+        panel.setLayout(new GridBagLayout());
 
-        int panelWidth = 1024;
-        int panelHeight = 768;
-
-        // Slight horizontal offset to center relative to background art
-        int xOffset = -25;
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridwidth = GridBagConstraints.REMAINDER;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.insets = new Insets(2, 0, 2, 0);
 
         // === TITLE LINE 1 ===
         JLabel titleLine1 = createOutlinedLabel("GREEN PROPERTY", 38f, new Color(185, 255, 140));
         titleLine1.setHorizontalAlignment(SwingConstants.CENTER);
-        titleLine1.setBounds((panelWidth - 800) / 2 + xOffset, 135, 800, 60);
-        panel.add(titleLine1);
+        gbc.insets = new Insets(50, 0, 2, 0);
+        panel.add(titleLine1, gbc);
 
         // === TITLE LINE 2 ===
         JLabel titleLine2 = createOutlinedLabel("EXCHANGE", 38f, new Color(185, 255, 140));
         titleLine2.setHorizontalAlignment(SwingConstants.CENTER);
-        titleLine2.setBounds((panelWidth - 800) / 2 + xOffset, 195, 800, 60);
-        panel.add(titleLine2);
+        gbc.insets = new Insets(0, 0, 0, 0);
+        panel.add(titleLine2, gbc);
 
         // === SUBTITLE ===
         JLabel subtitle = createOutlinedLabel("MCO2", 22f, new Color(210, 230, 190));
         subtitle.setHorizontalAlignment(SwingConstants.CENTER);
-        subtitle.setBounds((panelWidth - 200) / 2 + xOffset, 260, 200, 40);
-        panel.add(subtitle);
-
-        // === BUTTONS ===
-        int buttonWidth = 260;
-        int buttonHeight = 38;
-
-        int gap = 25;
-
-        // Move upward to sit in the green box area
-        int startY = 300; // moved up ~50px
+        gbc.insets = new Insets(0, 0, 30, 0);
+        panel.add(subtitle, gbc);
 
         JButton btn1 = createStyledButton("MANAGE & VIEW PROPERTIES", 14f);
-        btn1.setBounds((panelWidth - buttonWidth) / 2 + xOffset, startY, buttonWidth, buttonHeight);
         btn1.addActionListener(e -> {
             mainPanel.add(createPropertyManagementPanel(), "MANAGE_PROPERTY_REFRESH");
             cardLayout.show(mainPanel, "MANAGE_PROPERTY_REFRESH");
         });
 
         JButton btn2 = createStyledButton("CREATE NEW PROPERTY", 14f);
-        btn2.setBounds((panelWidth - buttonWidth) / 2 + xOffset, startY + buttonHeight + gap, buttonWidth, buttonHeight);
         btn2.addActionListener(e -> cardLayout.show(mainPanel, "CREATE_PROPERTY"));
 
         JButton btn3 = createStyledButton("EXIT", 14f);
-        btn3.setBounds((panelWidth - buttonWidth) / 2 + xOffset, startY + 2 * (buttonHeight + gap), buttonWidth, buttonHeight);
         btn3.addActionListener(e -> System.exit(0));
 
-        panel.add(btn1);
-        panel.add(btn2);
-        panel.add(btn3);
+        gbc.insets = new Insets(10, 0, 10, 0); // Consistent spacing between buttons
+        panel.add(btn1, gbc);
+        panel.add(btn2, gbc);
+        panel.add(btn3, gbc);
 
         return panel;
     }
@@ -307,8 +295,10 @@ public class MainView extends JFrame {
         detailsPanel.setBorder(BorderFactory.createTitledBorder("PROPERTY DETAILS & CALENDAR"));
         panel.add(detailsPanel, BorderLayout.CENTER);
 
-        JPanel actionsPanel = new JPanel(new GridLayout(2, 3, 8, 8));
-        actionsPanel.setBackground(new Color(194,255,97,192));
+        JPanel row1 = new JPanel(new GridLayout(1, 3, 10, 0));
+        JPanel row2 = new JPanel(new GridLayout(1, 3, 10, 0));
+        row1.setBackground(new Color(194,255,97,192));
+        row2.setBackground(new Color(194,255,97,192));
 
         JButton backBtn = createStyledButton("BACK TO MAIN MENU", 14f);
         backBtn.addActionListener(e -> cardLayout.show(mainPanel, "MAIN_MENU"));
@@ -319,17 +309,32 @@ public class MainView extends JFrame {
         JButton envImpactBtn = createStyledButton("MANAGE ENV IMPACT", 14f);
         JButton viewReservationsBtn = createStyledButton("VIEW RESERVATIONS", 14f);
 
-        actionsPanel.add(renameBtn);
-        actionsPanel.add(priceBtn);
-        actionsPanel.add(bookBtn);
-        actionsPanel.add(removeBtn);
-        actionsPanel.add(envImpactBtn);
-        actionsPanel.add(viewReservationsBtn);
+        row1.add(renameBtn);
+        row1.add(priceBtn);
+        row1.add(bookBtn);
+
+        row2.add(removeBtn);
+        row2.add(envImpactBtn);
+        row2.add(viewReservationsBtn);
+
+        JPanel actionsPanel = new JPanel();
+        actionsPanel.setLayout(new BoxLayout(actionsPanel, BoxLayout.Y_AXIS));
+        actionsPanel.setBackground(new Color(194,255,97,192));
+        actionsPanel.add(row1);
+        actionsPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        actionsPanel.add(row2);
 
         JPanel bottomPanel = new JPanel(new BorderLayout());
         bottomPanel.setBackground(new Color(173,193,176,222));
         bottomPanel.add(actionsPanel, BorderLayout.CENTER);
-        bottomPanel.add(backBtn, BorderLayout.SOUTH);
+
+        JPanel backButtonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        backButtonPanel.setBackground(new Color(173,193,176,222));
+        backButtonPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0)); // 25px top padding
+        backButtonPanel.add(backBtn);
+        backBtn.setPreferredSize(new Dimension(500, 38));
+
+        bottomPanel.add(backButtonPanel, BorderLayout.SOUTH);
         panel.add(bottomPanel, BorderLayout.SOUTH);
 
         Property selectedProperty = properties.get(propertySelector.getSelectedIndex());
@@ -886,7 +891,7 @@ public class MainView extends JFrame {
         gbc.gridx = 2; gbc.gridy = 1; gbc.gridwidth = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
         panel.add(updateBtn, gbc);
 
-        JButton checkRangeBtn = createStyledButton("CHECK RANGE COUNTS", 12f);
+        JButton checkRangeBtn = createStyledButton("CHECK RANGE COUNTS", 14f);
         gbc.gridx = 3; gbc.gridy = 1; gbc.gridwidth = 1;
         panel.add(checkRangeBtn, gbc);
 

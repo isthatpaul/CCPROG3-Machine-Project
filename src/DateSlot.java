@@ -107,4 +107,19 @@ public class DateSlot {
         }
         return "Day " + dayNumber + " - AVAILABLE";
     }
+
+    /**
+     * Books this slot for the provided reservation with validation.
+     *
+     * @param res the reservation to assign
+     * @return true if booking succeeded; false if already booked
+     */
+    public boolean book(Reservation res) {
+        if (booked || res == null) { 
+            return false; 
+        }
+        booked = true;
+        reservation = res;
+        return true;
+    }
 }

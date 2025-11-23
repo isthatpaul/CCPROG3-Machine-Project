@@ -30,29 +30,29 @@ public class BookingServiceImpl implements BookingService {
         Property p = repository.getProperty(propertyName);
         if (p == null) return false;
 
+        // Validate date bounds
         if (checkOut == 1 || checkIn == 30 || checkIn < 1 || checkOut > 30 || checkIn >= checkOut) {
             return false;
         }
 
-        for (Reservation r : p.getReservations()) {
-            int existingIn = r.getCheckInDay();
-            int existingOut = r.getCheckOutDay();
-            if (checkIn < existingOut && checkOut > existingIn) {
+        // Check for date conflicts
+        for (int d = checkIn; d < checkOut; d++) {
+            if (!p.getDates().get(d - 1).isAvailable()) {
                 return false;
             }
         }
 
+        // Calculate rates and create reservation
         List<Double> nightlyRates = priceStrategy.calculateNightlyRates(p, checkIn, checkOut);
         Reservation newRes = new Reservation(guestName, tier, checkIn, checkOut, nightlyRates);
 
+        // Use PropertyInternalAccessor to persist the reservation
         if (p instanceof PropertyInternalAccessor) {
             ((PropertyInternalAccessor) p).addReservationDirect(newRes);
             return true;
         } else {
-            for (int d = checkIn; d < checkOut; d++) {
-                p.getDates().get(d - 1).book(newRes);
-            }
-            return true;
+            // Fallback: This should not happen if all Properties implement PropertyInternalAccessor
+            return false;
         }
     }
 
