@@ -272,4 +272,22 @@ public abstract class Property implements PropertyInternalAccessor {
         this.basePrice = newPrice;
         return true;
     }
+
+    /**
+     * Checks if a date range is completely available for booking.
+     *
+     * @param checkIn check-in day (inclusive)
+     * @param checkOut check-out day (exclusive)
+     * @return true if all dates in range are available
+     */
+    public boolean isDateRangeAvailable(int checkIn, int checkOut) {
+        if (checkIn < 1 || checkOut > 31 || checkIn >= checkOut) return false;
+        
+        for (int d = checkIn; d < checkOut; d++) {
+            if (!dates.get(d - 1).isAvailable()) {
+                return false;
+            }
+        }
+        return true;
+    }
 }
