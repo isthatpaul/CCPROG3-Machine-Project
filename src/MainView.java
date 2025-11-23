@@ -987,5 +987,4 @@ public class MainView extends JFrame {
         detailsPanel.revalidate();
         detailsPanel.repaint();
     }
-
 }
