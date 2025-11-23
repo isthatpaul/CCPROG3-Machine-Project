@@ -86,7 +86,7 @@ public class DateSlot {
      * @return true if booking succeeded; false if already booked
      */
     public boolean book(Reservation res) {
-        if (booked) { return false; }
+        if (booked || res == null) { return false; }
         booked = true;
         reservation = res;
         return true;
