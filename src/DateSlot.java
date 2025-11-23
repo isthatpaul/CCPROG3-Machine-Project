@@ -1,9 +1,10 @@
 /**
- * The DateSlot class represents a single day in the 30-day calendar.
- * It tracks the day number, booking status, and environmental impact modifier.
- * The final price must be calculated externally by the Property object.
- * * @author Crisologo, Lim Un
- * @version 3.0 (Updated for MCO2)
+ * Represents a single day in the 30-day calendar.
+ * Tracks the day number, booking status, and environmental impact modifier.
+ * Pricing is computed externally (Property / PriceStrategy) using this slot's modifier.
+ *
+ * @author Crisologo, Lim Un
+ * @version 5.0
  */
 public class DateSlot {
 
@@ -20,7 +21,7 @@ public class DateSlot {
     private Reservation reservation;
 
     /**
-     * Creates a new DateSlot for the given day.
+     * Creates a new DateSlot for the given day number.
      *
      * @param dayNumber the day number (1–30)
      */
@@ -32,40 +33,58 @@ public class DateSlot {
     }
 
     /**
-     * Gets the environmental impact modifier for this slot.
+     * Returns the environmental impact modifier for this slot.
      *
-     * @return the modifier (0.8 to 1.2)
+     * @return modifier value in the range [0.8, 1.2]
      */
     public double getEnvImpactModifier() {
         return envImpactModifier;
     }
 
     /**
-     * Sets a new environmental impact modifier for this slot.
+     * Sets the environmental impact modifier for this slot.
+     * Value will be clamped to the allowed range [0.8, 1.2].
      *
-     * @param modifier the new modifier (will be capped between 0.8 and 1.2)
+     * @param modifier new modifier to set (0.8 - 1.2)
      */
     public void setEnvImpactModifier(double modifier) {
-        // Enforce the 0.8 to 1.2 range
         this.envImpactModifier = Math.max(0.8, Math.min(1.2, modifier));
     }
 
-    // NOTE: Removed setPricePerNight and getPricePerNight as price is now dynamic.
-    // ... (rest of the MCO1 methods: getDayNumber, isBooked, getReservation, isAvailable, book, cancelBooking, toString)
-
-    /** Gets the day number for this slot. */
+    /**
+     * Returns the day number (1..30).
+     *
+     * @return day number
+     */
     public int getDayNumber() { return dayNumber; }
 
-    /** Checks if this day is booked. */
+    /**
+     * Returns true if this slot is currently booked.
+     *
+     * @return true when booked, false otherwise
+     */
     public boolean isBooked() { return booked; }
 
-    /** Gets the reservation that booked this day. */
+    /**
+     * Returns the reservation that booked this slot, or null if available.
+     *
+     * @return Reservation or null
+     */
     public Reservation getReservation() { return reservation; }
 
-    /** Checks if this day is available for booking. */
+    /**
+     * Returns whether this slot is available for booking.
+     *
+     * @return true if available
+     */
     public boolean isAvailable() { return !booked; }
 
-    /** Books this day for the given reservation. */
+    /**
+     * Books this slot for the provided reservation.
+     *
+     * @param res the reservation to assign
+     * @return true if booking succeeded; false if already booked
+     */
     public boolean book(Reservation res) {
         if (booked) { return false; }
         booked = true;
@@ -73,7 +92,9 @@ public class DateSlot {
         return true;
     }
 
-    /** Cancels any existing booking for this day, making it available again. */
+    /**
+     * Cancels any existing booking for this slot, making it available.
+     */
     public void cancelBooking() {
         booked = false;
         reservation = null;
@@ -81,7 +102,6 @@ public class DateSlot {
 
     @Override
     public String toString() {
-        // The display logic should be handled by the GUI, but keeping the original for model integrity
         if (booked && reservation != null) {
             return "Day " + dayNumber + " - BOOKED (" + reservation.getGuestName() + ")";
         }

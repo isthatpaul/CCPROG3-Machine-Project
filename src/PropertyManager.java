@@ -2,30 +2,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The PropertyManager class manages all properties in the Green Property System.
- * It now uses polymorphism to create different property types.
- * * @author Crisologo, Lim Un
- * @version 3.0 (Updated for MCO2)
+ * Concrete implementation of PropertyRepository.
+ * Manages the in-memory collection of Property objects.
  */
-public class PropertyManager {
+public class PropertyManager implements PropertyRepository {
     private List<Property> properties;
 
     public PropertyManager() {
         this.properties = new ArrayList<>();
     }
 
-    /**
-     * Adds a new property to the system, instantiating the correct subclass
-     * based on the provided type.
-     *
-     * @param name the name of the property to add
-     * @param basePrice the base price per night for the property
-     * @param type the type of property (1: Eco-Apartment, 2: Sustainable House, etc.)
-     * @return true if the property was added successfully, false if a duplicate name exists or type is invalid
-     */
+    @Override
     public boolean addProperty(String name, double basePrice, int type) {
         if (!isUniqueName(name)) {
-            // In GUI, this should return false and an error dialog will show.
             return false;
         }
 
@@ -44,7 +33,6 @@ public class PropertyManager {
                 newProperty = new EcoGlamping(name, basePrice);
                 break;
             default:
-                // Invalid type selected
                 return false;
         }
 
@@ -52,8 +40,7 @@ public class PropertyManager {
         return true;
     }
 
-    // --- EXISTING MCO1 METHODS ---
-
+    @Override
     public Property getProperty(String name) {
         for (Property p : properties) {
             if (p.getPropertyName().equalsIgnoreCase(name)) {
@@ -63,10 +50,12 @@ public class PropertyManager {
         return null;
     }
 
+    @Override
     public List<Property> listProperties() {
-        return properties;
+        return new ArrayList<>(properties);
     }
 
+    @Override
     public boolean removeProperty(String name) {
         for (int i = 0; i < properties.size(); i++) {
             Property p = properties.get(i);
@@ -79,6 +68,7 @@ public class PropertyManager {
         return false;
     }
 
+    @Override
     public boolean renameProperty(String oldName, String newName) {
         if (!isUniqueName(newName)) { return false; }
         Property p = getProperty(oldName);
@@ -89,12 +79,7 @@ public class PropertyManager {
         return false;
     }
 
-    public boolean bookProperty(String name, String guestName, int checkIn, int checkOut) {
-        Property p = getProperty(name);
-        if (p == null) { return false; }
-        return p.addReservation(guestName, checkIn, checkOut);
-    }
-
+    @Override
     public boolean isUniqueName(String name) {
         for (Property p : properties) {
             if (p.getPropertyName().equalsIgnoreCase(name)) {
