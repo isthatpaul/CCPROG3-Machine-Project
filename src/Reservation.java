@@ -110,6 +110,11 @@ public class Reservation {
         return new ArrayList<>(nightlyRatesBeforeDiscount);
     }
 
+    /**
+     * Returns a string representation of the reservation.
+     * 
+     * @return string representation
+     */
     @Override
     public String toString() {
         return String.format("%s | %s | Days %d-%d | Nights: %d | Total: PHP %.2f",
