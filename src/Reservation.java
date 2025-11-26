@@ -36,7 +36,10 @@ public class Reservation {
     }
 
     /**
-     * Applies the guest-tier discount to nightlyRatesBeforeDiscount and computes totalPrice.
+     * Calculates the total price applying the guest tier discount to each nightly rate.
+     * Modifies nightlyRatesApplied and totalPrice fields.
+     * 
+     * @return void
      */
     private void calculateTotalWithDiscount() {
         this.totalPrice = 0.0;
@@ -48,22 +51,46 @@ public class Reservation {
         }
     }
 
-    /** @return guest name */
+    /**
+     * Returns the guest name.
+     * 
+     * @return guest name
+     */
     public String getGuestName() { return guestName; }
 
-    /** @return guest tier */
+    /**
+     * Returns the guest tier.
+     * 
+     * @return guest tier
+     */
     public GuestTier getGuestTier() { return guestTier; }
 
-    /** @return check-in day (inclusive) */
+    /**
+     * Returns the check-in day.
+     * 
+     * @return check-in day
+     */
     public int getCheckInDay() { return checkInDay; }
 
-    /** @return check-out day (exclusive) */
+    /**
+     * Returns the check-out day.
+     * 
+     * @return check-out day
+     */
     public int getCheckOutDay() { return checkOutDay; }
 
-    /** @return total price after discounts */
+    /**
+     * Returns the total price of the reservation after discounts.
+     * 
+     * @return total price
+     */
     public double getTotalPrice() { return totalPrice; }
 
-    /** @return number of nights in reservation */
+    /**
+     * Returns the number of nights in the reservation.
+     * 
+     * @return number of nights
+     */
     public int getNumberOfNights() { return nightlyRatesApplied.size(); }
 
     /**

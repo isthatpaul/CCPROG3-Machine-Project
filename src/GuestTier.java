@@ -8,7 +8,7 @@
  * PLATINUM= 15%
  */
 public enum GuestTier {
-    REGULAR(0.0),
+    REGULAR(0.0), 
     SILVER(0.05),
     GOLD(0.10),
     PLATINUM(0.15);

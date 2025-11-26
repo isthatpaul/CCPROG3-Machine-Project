@@ -2,8 +2,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Default PriceStrategy implementation.
- * Computes nightly rate as basePrice * propertyMultiplier * dateEnvModifier.
+ * Default implementation of PriceStrategy that calculates nightly rates
+ * based on the property's final daily rate for each night in the booking range.
+ * Implements the PriceStrategy interface.
  */
 public class DefaultPriceStrategy implements PriceStrategy {
 

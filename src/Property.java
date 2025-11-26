@@ -61,17 +61,29 @@ public abstract class Property implements PropertyInternalAccessor {
         return basePrice * getRateMultiplier() * slot.getEnvImpactModifier();
     }
 
-    /** @return property name */
+    /**
+     * Returns the property name.
+     * 
+     * @return property name
+     */
     public String getPropertyName() {
         return propertyName;
     }
 
-    /** @return base price */
+    /**
+     * Returns the base price of the property.
+     * 
+     * @return base price
+     */
     public double getBasePrice() {
         return basePrice;
     }
 
-    /** @return direct access to DateSlot list (owned by property) */
+    /**
+     * Returns the list of DateSlot instances for this property.
+     *
+     * @return list of DateSlot
+     */
     public List<DateSlot> getDates() {
         return dates;
     }
@@ -113,12 +125,20 @@ public abstract class Property implements PropertyInternalAccessor {
         return true;
     }
 
-    /** @return true if property has no active reservations */
+    /**
+     * Checks if the property can be removed (i.e., has no active reservations).
+     *
+     * @return true if removable
+     */
     public boolean canBeRemoved() {
         return reservations.isEmpty();
     }
 
-    /** @return total earnings from all reservations */
+    /**
+     * Calculate total earnings from all reservations.
+     *
+     * @return total earnings
+     */
     public double getTotalEarnings() {
         double total = 0.0;
         for (Reservation r : reservations) {
@@ -127,7 +147,11 @@ public abstract class Property implements PropertyInternalAccessor {
         return total;
     }
 
-    /** @return number of available dates (not booked) */
+    /** 
+     * Count available (not booked) dates.
+     * 
+     * @return number of available dates (not booked) 
+     */
     public int countAvailableDates() {
         int count = 0;
         for (DateSlot date : dates) {

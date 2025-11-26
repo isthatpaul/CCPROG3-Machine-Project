@@ -56,6 +56,13 @@ public class BookingServiceImpl implements BookingService {
         }
     }
 
+    /**
+     * Removes the specified reservation from the property.
+     * 
+     * @param propertyName the name of the property
+     * @param reservation the reservation to remove
+     * @return true if removal was successful; false otherwise
+     */
     @Override
     public boolean removeReservation(String propertyName, Reservation reservation) {
         Property p = repository.getProperty(propertyName);
@@ -63,6 +70,12 @@ public class BookingServiceImpl implements BookingService {
         return p.removeReservation(reservation);
     }
 
+    /**
+     * Retrieves all reservations for the specified property.
+     * 
+     * @param propertyName the name of the property
+     * @return list of reservations
+     */
     @Override
     public List<Reservation> getReservations(String propertyName) {
         Property p = repository.getProperty(propertyName);
