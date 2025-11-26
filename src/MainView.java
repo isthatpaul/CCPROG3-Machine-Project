@@ -11,6 +11,8 @@ import java.util.List;
 /**
  * Green Property Exchange System (MCO2)
  * Retro pixel-art themed main view using Java Swing.
+ * Provides navigation between main menu, property management, and property creation.
+ * Wires together PropertyManager and BookingService.
  */
 public class MainView extends JFrame {
 
@@ -24,6 +26,9 @@ public class MainView extends JFrame {
     private static final DecimalFormat MODIFIER_FORMAT = new DecimalFormat("#0.00");
     private final Font retroFont;
 
+    /**
+     * Constructs the main view, initializes UI components and services.
+     */
     public MainView() {
         super("Green Property Exchange System (MCO2)");
 
@@ -48,10 +53,15 @@ public class MainView extends JFrame {
         mainPanel.add(createPropertyManagementPanel(), "MANAGE_PROPERTY");
         mainPanel.add(createPropertyCreationPanel(), "CREATE_PROPERTY");
 
-        addSampleData();
         add(mainPanel);
     }
 
+    /**
+     * Loads the retro pixel font from resources.
+     *
+     * @param size font size
+     * @return the loaded Font object
+     */
     private Font loadRetroFont(float size) {
         try {
             InputStream is = getClass().getResourceAsStream("/resources/PressStart2P-Regular.ttf");
@@ -68,26 +78,18 @@ public class MainView extends JFrame {
         return new Font("Courier New", Font.BOLD, (int) size);
     }
 
-    private void addSampleData() {
-        try {
-            manager.addProperty("Eco-Apt 101", 1000.0, 1);
-            manager.addProperty("Sustainable Home", 1000.0, 2);
-            manager.addProperty("Green Resort", 1500.0, 3);
-            manager.addProperty("Eco Glamping", 2000.0, 4);
-
-            // Use service layer for bookings so pricing/validation is centralized
-            if (!bookingService.book("Eco-Apt 101", "Test Guest", GuestTier.REGULAR, 5, 8)) {
-                System.out.println("Sample booking failed (might be conflicting dates)");
-            }
-        } catch (Exception e) {
-            System.err.println("Error adding sample data: " + e.getMessage());
-        }
-    }
-
     // ======== BACKGROUND PANEL =========
+    /**
+     * Custom JPanel that paints a background image.
+     */
     private static class BackgroundPanel extends JPanel {
         private final Image backgroundImage;
 
+        /**
+         * Constructs a BackgroundPanel with the specified image resource.
+         * 
+         * @param resourcePath path to the image resource
+         */
         public BackgroundPanel(String resourcePath) {
             java.net.URL imgURL = getClass().getResource(resourcePath);
             if (imgURL == null) {
@@ -99,6 +101,11 @@ public class MainView extends JFrame {
             setOpaque(false);
         }
 
+        /**
+         * Paints the background image scaled to fit the panel.
+         * 
+         * @param g the Graphics context
+         */
         @Override
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
@@ -109,8 +116,21 @@ public class MainView extends JFrame {
     }
 
     // ======== OUTLINED LABEL CREATOR =========
+    /**
+     * Creates a JLabel with outlined text for better visibility.
+     * 
+     * @param text the label text
+     * @param size font size
+     * @param textColor the text color
+     * @return the outlined JLabel
+     */
     private JLabel createOutlinedLabel(String text, float size, Color textColor) {
         JLabel label = new JLabel(text, SwingConstants.CENTER) {
+            /**
+             * Paints the outlined text.
+             * 
+             * @param g the Graphics context
+             */
             @Override
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
@@ -140,17 +160,35 @@ public class MainView extends JFrame {
                 g2.dispose();
             }
         };
-        label.setPreferredSize(new Dimension(800, (int) (size * 3.5)));
+
+        // Let layout manage sizing; set font so preferred size is computed sensibly
         label.setOpaque(false);
+        label.setFont(retroFont.deriveFont(size));
+        label.setForeground(textColor);
+        // small recommended minimum height so the outline isn't clipped on some LAFs
+        label.setMinimumSize(new Dimension(100, (int)(size * 2.0)));
         return label;
     }
 
+    /**
+     * Creates a styled JButton with pixel-art aesthetics and scrolling text if needed.
+     * 
+     * @param text button text
+     * @param fontSize font size
+     * @return the styled JButton
+     */
     private JButton createStyledButton(String text, float fontSize) {
 
         final String displayText = text;    // We store the real text here
         final int[] textOffset = {0};       // Used for scrolling
 
         JButton button = new JButton("") {  // Set button text to empty so Swing doesn't draw it
+
+            /**
+             * Paints the button with scrolling text if needed.
+             * 
+             * @param g the Graphics context
+             */
             @Override
             protected void paintComponent(Graphics g) {
 
@@ -200,12 +238,23 @@ public class MainView extends JFrame {
 
         // Hover actions
         button.addMouseListener(new java.awt.event.MouseAdapter() {
+            
+            /**
+             * Starts scrolling and changes background on hover.
+             * 
+             * @param e mouse event
+             */
             @Override
             public void mouseEntered(java.awt.event.MouseEvent e) {
                 scrollTimer.start();
                 button.setBackground(new Color(248, 248, 248));
             }
 
+            /**
+             * Stops scrolling and resets background on exit.
+             * 
+             * @param e mouse event
+             */
             @Override
             public void mouseExited(java.awt.event.MouseEvent e) {
                 scrollTimer.stop();
@@ -218,55 +267,119 @@ public class MainView extends JFrame {
         return button;
     }
 
-
+    // ========= MAIN MENU PANEL =========
+    /**
+     * Creates the main menu panel.
+     * 
+     * @return the main menu JPanel
+     */
     private JPanel createMainMenuPanel() {
         BackgroundPanel panel = new BackgroundPanel("/resources/main_menu_bg.png");
         panel.setLayout(new GridBagLayout());
+        panel.setOpaque(false);
 
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridwidth = GridBagConstraints.REMAINDER;
+        gbc.gridx = 0;
+        gbc.fill = GridBagConstraints.NONE;
         gbc.anchor = GridBagConstraints.CENTER;
-        gbc.insets = new Insets(2, 0, 2, 0);
+        gbc.weightx = 1.0;
 
-        // === TITLE LINE 1 ===
+        // Top spacer to push content towards vertical center
+        gbc.gridy = 0;
+        gbc.weighty = 1.0;
+        JPanel topSpacer = new JPanel();
+        topSpacer.setOpaque(false);
+        panel.add(topSpacer, gbc);
+
+        // Content: title + buttons grouped together so they always move as a block
+        gbc.gridy = 1;
+        gbc.weighty = 0.0;
+        JPanel content = new JPanel();
+        content.setOpaque(false);
+        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
+        content.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        // Title box (stacked)
+        JPanel titleBox = new JPanel();
+        titleBox.setOpaque(false);
+        titleBox.setLayout(new BoxLayout(titleBox, BoxLayout.Y_AXIS));
+        titleBox.setAlignmentX(Component.CENTER_ALIGNMENT);
+
         JLabel titleLine1 = createOutlinedLabel("GREEN PROPERTY", 38f, new Color(185, 255, 140));
-        titleLine1.setHorizontalAlignment(SwingConstants.CENTER);
-        gbc.insets = new Insets(50, 0, 2, 0);
-        panel.add(titleLine1, gbc);
+        titleLine1.setAlignmentX(Component.CENTER_ALIGNMENT);
+        titleLine1.setBorder(BorderFactory.createEmptyBorder(8, 10, 2, 10));
+        titleBox.add(titleLine1);
 
-        // === TITLE LINE 2 ===
         JLabel titleLine2 = createOutlinedLabel("EXCHANGE", 38f, new Color(185, 255, 140));
-        titleLine2.setHorizontalAlignment(SwingConstants.CENTER);
-        gbc.insets = new Insets(0, 0, 0, 0);
-        panel.add(titleLine2, gbc);
+        titleLine2.setAlignmentX(Component.CENTER_ALIGNMENT);
+        titleLine2.setBorder(BorderFactory.createEmptyBorder(0, 10, 6, 10));
+        titleBox.add(titleLine2);
 
-        // === SUBTITLE ===
         JLabel subtitle = createOutlinedLabel("MCO2", 22f, new Color(210, 230, 190));
-        subtitle.setHorizontalAlignment(SwingConstants.CENTER);
-        gbc.insets = new Insets(0, 0, 30, 0);
-        panel.add(subtitle, gbc);
+        subtitle.setAlignmentX(Component.CENTER_ALIGNMENT);
+        subtitle.setBorder(BorderFactory.createEmptyBorder(0, 10, 8, 10));
+        titleBox.add(subtitle);
+
+        content.add(titleBox);
+
+        // Small gap between title and buttons (keeps them visually close)
+        content.add(Box.createRigidArea(new Dimension(0, 8)));
+
+        // Buttons box (vertical)
+        JPanel buttonsBox = new JPanel();
+        buttonsBox.setOpaque(false);
+        buttonsBox.setLayout(new BoxLayout(buttonsBox, BoxLayout.Y_AXIS));
+        buttonsBox.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        // Choose a consistent maximum width so buttons center nicely
+        int buttonWidth = 360;
+        int buttonHeight = 38;
 
         JButton btn1 = createStyledButton("MANAGE & VIEW PROPERTIES", 14f);
+        btn1.setMaximumSize(new Dimension(buttonWidth, buttonHeight));
+        btn1.setAlignmentX(Component.CENTER_ALIGNMENT);
         btn1.addActionListener(e -> {
             mainPanel.add(createPropertyManagementPanel(), "MANAGE_PROPERTY_REFRESH");
             cardLayout.show(mainPanel, "MANAGE_PROPERTY_REFRESH");
         });
 
         JButton btn2 = createStyledButton("CREATE NEW PROPERTY", 14f);
+        btn2.setMaximumSize(new Dimension(buttonWidth, buttonHeight));
+        btn2.setAlignmentX(Component.CENTER_ALIGNMENT);
         btn2.addActionListener(e -> cardLayout.show(mainPanel, "CREATE_PROPERTY"));
 
         JButton btn3 = createStyledButton("EXIT", 14f);
+        btn3.setMaximumSize(new Dimension(buttonWidth, buttonHeight));
+        btn3.setAlignmentX(Component.CENTER_ALIGNMENT);
         btn3.addActionListener(e -> System.exit(0));
 
-        gbc.insets = new Insets(10, 0, 10, 0); // Consistent spacing between buttons
-        panel.add(btn1, gbc);
-        panel.add(btn2, gbc);
-        panel.add(btn3, gbc);
+        // Add buttons with small gaps
+        buttonsBox.add(btn1);
+        buttonsBox.add(Box.createRigidArea(new Dimension(0, 8)));
+        buttonsBox.add(btn2);
+        buttonsBox.add(Box.createRigidArea(new Dimension(0, 8)));
+        buttonsBox.add(btn3);
+
+        content.add(buttonsBox);
+
+        panel.add(content, gbc);
+
+        // Bottom spacer to keep content centered vertically
+        gbc.gridy = 2;
+        gbc.weighty = 1.0;
+        JPanel bottomSpacer = new JPanel();
+        bottomSpacer.setOpaque(false);
+        panel.add(bottomSpacer, gbc);
 
         return panel;
     }
 
     // PROPERTY MANAGEMENT - uses main_menu_bg.png for consistency, with tint
+    /**
+     * Creates the property management panel.
+     * 
+     * @return the property management JPanel
+     */
     private JPanel createPropertyManagementPanel() {
         JPanel panel = new BackgroundPanel("/resources/main_menu_bg.png");
         panel.setLayout(new BorderLayout(16, 16));
@@ -295,10 +408,8 @@ public class MainView extends JFrame {
         detailsPanel.setBorder(BorderFactory.createTitledBorder("PROPERTY DETAILS & CALENDAR"));
         panel.add(detailsPanel, BorderLayout.CENTER);
 
-        JPanel row1 = new JPanel(new GridLayout(1, 3, 10, 0));
-        JPanel row2 = new JPanel(new GridLayout(1, 3, 10, 0));
-        row1.setBackground(new Color(194,255,97,192));
-        row2.setBackground(new Color(194,255,97,192));
+        JPanel actionsPanel = new JPanel(new GridLayout(2, 3, 8, 8));
+        actionsPanel.setBackground(new Color(194,255,97,192));
 
         JButton backBtn = createStyledButton("BACK TO MAIN MENU", 14f);
         backBtn.addActionListener(e -> cardLayout.show(mainPanel, "MAIN_MENU"));
@@ -309,32 +420,17 @@ public class MainView extends JFrame {
         JButton envImpactBtn = createStyledButton("MANAGE ENV IMPACT", 14f);
         JButton viewReservationsBtn = createStyledButton("VIEW RESERVATIONS", 14f);
 
-        row1.add(renameBtn);
-        row1.add(priceBtn);
-        row1.add(bookBtn);
-
-        row2.add(removeBtn);
-        row2.add(envImpactBtn);
-        row2.add(viewReservationsBtn);
-
-        JPanel actionsPanel = new JPanel();
-        actionsPanel.setLayout(new BoxLayout(actionsPanel, BoxLayout.Y_AXIS));
-        actionsPanel.setBackground(new Color(194,255,97,192));
-        actionsPanel.add(row1);
-        actionsPanel.add(Box.createRigidArea(new Dimension(0, 10)));
-        actionsPanel.add(row2);
+        actionsPanel.add(renameBtn);
+        actionsPanel.add(priceBtn);
+        actionsPanel.add(bookBtn);
+        actionsPanel.add(removeBtn);
+        actionsPanel.add(envImpactBtn);
+        actionsPanel.add(viewReservationsBtn);
 
         JPanel bottomPanel = new JPanel(new BorderLayout());
         bottomPanel.setBackground(new Color(173,193,176,222));
         bottomPanel.add(actionsPanel, BorderLayout.CENTER);
-
-        JPanel backButtonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        backButtonPanel.setBackground(new Color(173,193,176,222));
-        backButtonPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0)); // 25px top padding
-        backButtonPanel.add(backBtn);
-        backBtn.setPreferredSize(new Dimension(500, 38));
-
-        bottomPanel.add(backButtonPanel, BorderLayout.SOUTH);
+        bottomPanel.add(backBtn, BorderLayout.SOUTH);
         panel.add(bottomPanel, BorderLayout.SOUTH);
 
         Property selectedProperty = properties.get(propertySelector.getSelectedIndex());
@@ -358,6 +454,13 @@ public class MainView extends JFrame {
         return panel;
     }
 
+    /**
+     * Creates the remove property action listener.
+     * 
+     * @param selector the property selector JComboBox
+     * @param properties the list of properties
+     * @return the ActionListener
+     */
     private ActionListener createRemovePropertyListener(JComboBox<String> selector, List<Property> properties) {
         return e -> {
             Property p = properties.get(selector.getSelectedIndex());
@@ -376,6 +479,14 @@ public class MainView extends JFrame {
         };
     }
 
+    /**
+     * Creates the booking action listener.
+     * 
+     * @param selector the property selector JComboBox
+     * @param properties the list of properties
+     * @param detailsPanel the details panel to refresh
+     * @return the ActionListener
+     */
     private ActionListener createBookingListener(JComboBox<String> selector, List<Property> properties, JPanel detailsPanel) {
         return e -> {
             Property p = properties.get(selector.getSelectedIndex());
@@ -424,6 +535,14 @@ public class MainView extends JFrame {
         };
     }
 
+    /**
+     * Creates the update price action listener.
+     * 
+     * @param selector the property selector JComboBox
+     * @param properties the list of properties
+     * @param detailsPanel the details panel to refresh
+     * @return the ActionListener
+     */
     private ActionListener createUpdatePriceListener(JComboBox<String> selector, List<Property> properties, JPanel detailsPanel) {
         return e -> {
             Property p = properties.get(selector.getSelectedIndex());
@@ -447,6 +566,13 @@ public class MainView extends JFrame {
         };
     }
 
+    /**
+     * Creates the rename property action listener.
+     * 
+     * @param selector the property selector JComboBox
+     * @param properties the list of properties
+     * @return the ActionListener
+     */
     private ActionListener createRenameListener(JComboBox<String> selector, List<Property> properties) {
         return e -> {
             Property p = properties.get(selector.getSelectedIndex());
@@ -462,6 +588,14 @@ public class MainView extends JFrame {
         };
     }
 
+    /**
+     * Creates the view reservations action listener.
+     * 
+     * @param selector the property selector JComboBox
+     * @param properties the list of properties
+     * @param detailsPanel the details panel
+     * @return the ActionListener
+     */
     private ActionListener createViewReservationsListener(JComboBox<String> selector, List<Property> properties, JPanel detailsPanel) {
         return e -> {
             Property property = properties.get(selector.getSelectedIndex());
@@ -535,6 +669,11 @@ public class MainView extends JFrame {
         };
     }
 
+    /**
+     * Displays detailed information about a reservation.
+     * 
+     * @param reservation the Reservation object
+     */
     private void showReservationDetails(Reservation reservation) {
         StringBuilder sb = new StringBuilder();
         sb.append("Guest: ").append(reservation.getGuestName()).append("\n");
@@ -561,6 +700,11 @@ public class MainView extends JFrame {
     }
 
     // PROPERTY CREATION - also uses main_menu_bg.png for cohesive style
+    /**
+     * Creates the property creation panel.
+     * 
+     * @return the property creation JPanel
+     */
     private JPanel createPropertyCreationPanel() {
         JPanel panel = new BackgroundPanel("/resources/main_menu_bg.png");
         panel.setLayout(new BorderLayout(14, 14));
@@ -635,6 +779,14 @@ public class MainView extends JFrame {
     }
 
     // ======== ENVIRONMENTAL IMPACT MANAGEMENT =========
+    /**
+     * Creates the environmental impact management action listener.
+     * 
+     * @param selector the property selector JComboBox
+     * @param properties the list of properties
+     * @param detailsPanel the details panel to refresh
+     * @return the ActionListener
+     */
     private ActionListener createEnvImpactListener(JComboBox<String> selector, List<Property> properties, JPanel detailsPanel) {
         return e -> {
             Property property = properties.get(selector.getSelectedIndex());
@@ -735,6 +887,12 @@ public class MainView extends JFrame {
         };
     }
 
+    /**
+     * Updates the modifiers display area with current environmental impact modifiers.
+     * 
+     * @param area the JTextArea to update
+     * @param property the Property object
+     */
     private void updateModifiersDisplay(JTextArea area, Property property) {
         StringBuilder sb = new StringBuilder();
         for (int day = 1; day <= 30; day++) {
@@ -749,11 +907,18 @@ public class MainView extends JFrame {
         area.setText(sb.toString());
     }
 
-    // CALENDAR PANEL - uses main_menu_bg.png for cohesive game vibe
+    // CALENDAR PANEL - updated to match the calendar layout provided earlier
+    /**
+     * Creates the calendar panel for a property.
+     * 
+     * @param property the Property object
+     * @return the calendar JPanel
+     */
     private JPanel createCalendarPanel(Property property) {
         JPanel calendarPanel = new BackgroundPanel("/resources/main_menu_bg.png");
         calendarPanel.setLayout(new BorderLayout(10, 10));
 
+        // INFO PANEL (top)
         JPanel infoPanel = new JPanel(new GridLayout(4, 2));
         infoPanel.setBackground(new Color(240,255,239,222));
         infoPanel.setBorder(BorderFactory.createTitledBorder("PROPERTY INFO"));
@@ -767,11 +932,9 @@ public class MainView extends JFrame {
         infoPanel.add(new JLabel(String.valueOf(property.countAvailableDates()))).setFont(retroFont.deriveFont(16f));
         calendarPanel.add(infoPanel, BorderLayout.NORTH);
 
-        String[] columnNames = new String[7];
+        // CALENDAR TABLE (SUN..SAT columns, 5 rows)
         String[] dayNames = {"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"};
-        for (int i = 0; i < 7; i++) columnNames[i] = dayNames[i];
-
-        DefaultTableModel model = new DefaultTableModel(columnNames, 5) {
+        DefaultTableModel model = new DefaultTableModel(dayNames, 5) {
             @Override
             public boolean isCellEditable(int row, int column) { return false; }
         };
@@ -781,58 +944,71 @@ public class MainView extends JFrame {
         calendarTable.setRowHeight(40);
         calendarTable.getTableHeader().setFont(retroFont.deriveFont(13f));
 
+        // Fill table cells with day info for days 1..30
         for (int day = 1; day <= 30; day++) {
             int row = (day - 1) / 7;
             int col = (day - 1) % 7;
             if (row < 5) {
                 DateSlot slot = property.getDates().get(day - 1);
                 double finalRate = property.calculateFinalDailyRate(day);
-                String nameInfo = slot.isBooked()
+                String cellHtml = slot.isBooked()
                         ? "<html><b>DAY " + day + "</b><br><font color=gray><i>BOOKED</i></font></html>"
                         : "<html><b>DAY " + day + "</b><br>RATE: " + PRICE_FORMAT.format(finalRate) + "</html>";
-                model.setValueAt(nameInfo, row, col);
+                model.setValueAt(cellHtml, row, col);
             }
         }
 
+        // Custom renderer to color cells based on booked/modifier status and provide tooltips
         calendarTable.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
             @Override
-            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+            public Component getTableCellRendererComponent(JTable table, Object value,
+                                                           boolean isSelected, boolean hasFocus,
+                                                           int row, int column) {
                 super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 setFont(retroFont.deriveFont(13f));
-                int day = (row * 7) + column + 1;
-                if (day > 30) {
+                int day = row * 7 + column + 1;
+                if (day > 30) { // empty cells after day 30
                     setBackground(new Color(36, 63, 41)); // match game bg
                     setText("");
+                    setToolTipText(null);
                     return this;
                 }
+
                 DateSlot slot = property.getDates().get(day - 1);
                 double mod = slot.getEnvImpactModifier();
 
                 if (slot.isBooked()) {
-                    // Show booked color and also display guest name (short) in tooltip
-                    setBackground(new Color(100, 85, 53)); // Brown, match vines
+                    setBackground(new Color(100, 85, 53)); // Brown for booked
                     if (slot.getReservation() != null) {
-                        String guest = slot.getReservation().getGuestName();
-                        setToolTipText("Booked by: " + guest);
+                        setToolTipText("Booked by: " + slot.getReservation().getGuestName());
                     } else {
                         setToolTipText("BOOKED");
                     }
                 } else if (mod >= 0.80 && mod <= 0.89) {
                     setBackground(new Color(194, 255, 97)); // Neon leaf
+                    setToolTipText("Modifier: " + MODIFIER_FORMAT.format(mod));
                 } else if (Math.abs(mod - 1.0) < 1e-9) {
                     setBackground(new Color(228, 240, 211, 222)); // Soft menu bg
+                    setToolTipText("Modifier: 1.00");
                 } else if (mod >= 1.01 && mod <= 1.20) {
                     setBackground(new Color(255, 240, 58)); // Arcade yellow
+                    setToolTipText("Modifier: " + MODIFIER_FORMAT.format(mod));
                 } else {
                     setBackground(new Color(228, 240, 211, 222));
+                    setToolTipText("Modifier: " + MODIFIER_FORMAT.format(mod));
                 }
                 setForeground(new Color(36, 63, 41));
                 return this;
             }
         });
 
-        // Add mouse click to show date details
+        // Mouse click => show details for the clicked day (same behavior as earlier)
         calendarTable.addMouseListener(new java.awt.event.MouseAdapter() {
+            /**
+             * Handles mouse click events on the calendar table.
+             * 
+             * @param e the MouseEvent
+             */
             @Override
             public void mouseClicked(java.awt.event.MouseEvent e) {
                 int row = calendarTable.rowAtPoint(e.getPoint());
@@ -862,12 +1038,20 @@ public class MainView extends JFrame {
         JScrollPane scrollPane = new JScrollPane(calendarTable);
         calendarPanel.add(scrollPane, BorderLayout.CENTER);
 
+        // Add modifier panel (existing helper)
         JPanel modifierPanel = createModifierPanel(property, calendarPanel);
         calendarPanel.add(modifierPanel, BorderLayout.SOUTH);
 
         return calendarPanel;
     }
 
+    /**
+     * Creates the environmental impact modifier panel.
+     * 
+     * @param property the Property object
+     * @param parentPanel the parent JPanel
+     * @return the modifier JPanel
+     */
     private JPanel createModifierPanel(Property property, JPanel parentPanel) {
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setBackground(new Color(228,240,211,210));
@@ -892,7 +1076,7 @@ public class MainView extends JFrame {
         gbc.gridx = 2; gbc.gridy = 1; gbc.gridwidth = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
         panel.add(updateBtn, gbc);
 
-        JButton checkRangeBtn = createStyledButton("CHECK RANGE COUNTS", 14f);
+        JButton checkRangeBtn = createStyledButton("CHECK RANGE COUNTS", 12f);
         gbc.gridx = 3; gbc.gridy = 1; gbc.gridwidth = 1;
         panel.add(checkRangeBtn, gbc);
 
@@ -913,22 +1097,29 @@ public class MainView extends JFrame {
                 int end = Integer.parseInt(endDayField.getText().trim());
                 double modifier = Double.parseDouble(modifierField.getText().trim());
 
-                if (start < 1 || end > 30 || start > end || modifier < 0.8 || modifier > 1.2) {
-                    throw new IllegalArgumentException("INVALID DAY RANGE OR MODIFIER VALUE.");
+                if (start < 1 || end > 30 || start > end) {
+                    throw new IllegalArgumentException("Invalid day range (1-30).");
+                }
+                if (modifier < 0.8 || modifier > 1.2) {
+                    throw new IllegalArgumentException("Modifier must be between 0.80 and 1.20.");
                 }
 
-                for (int d = start; d <= end; d++) {
-                    property.getDates().get(d - 1).setEnvImpactModifier(modifier);
+                // Use property-level API so any internal validation/logic is centralized there
+                boolean ok = property.setEnvironmentalImpactRange(start, end, modifier);
+                if (!ok) {
+                    throw new IllegalArgumentException("Property rejected the modifier range (check implementation).");
                 }
 
-                JOptionPane.showMessageDialog(this, String.format("MODIFIER UPDATED FOR DAYS %d-%d TO %s.", start, end, MODIFIER_FORMAT.format(modifier)), "SUCCESS", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this,
+                        String.format("MODIFIER UPDATED FOR DAYS %d-%d TO %s.", start, end, MODIFIER_FORMAT.format(modifier)),
+                        "SUCCESS", JOptionPane.INFORMATION_MESSAGE);
 
-                Container container = parentPanel.getParent();
-                container.removeAll();
-                container.add(createCalendarPanel(property), BorderLayout.CENTER);
-                container.revalidate();
-                container.repaint();
+                // Refresh the whole property-management view (consistent with other refreshes)
+                mainPanel.add(createPropertyManagementPanel(), "MANAGE_PROPERTY_REFRESH");
+                cardLayout.show(mainPanel, "MANAGE_PROPERTY_REFRESH");
 
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(this, "ENTER VALID NUMBERS FOR START, END, AND MODIFIER.", "INPUT ERROR", JOptionPane.ERROR_MESSAGE);
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, "ERROR: " + ex.getMessage(), "INPUT ERROR", JOptionPane.ERROR_MESSAGE);
             }
@@ -956,10 +1147,31 @@ public class MainView extends JFrame {
         return panel;
     }
 
+    /**
+     * ColorIcon is a simple Icon implementation that displays a colored square.
+     * Used for the legend in the calendar panel.
+     */
     private static class ColorIcon implements Icon {
         private final Color color;
         private static final int SIZE = 15;
-        public ColorIcon(Color color) { this.color = color; }
+        /**
+         * Creates a ColorIcon with the specified color.
+         * 
+         * @param color the Color to use
+         */
+        public ColorIcon(Color color) { 
+            this.color = color; 
+        }
+
+        /**
+         * Paints the icon at the specified location.
+         * 
+         * @param c the component to which the icon is added
+         * @param g the Graphics context
+         * @param x the x-coordinate
+         * @param y the y-coordinate
+         * @return void
+         */
         @Override
         public void paintIcon(Component c, Graphics g, int x, int y) {
             g.setColor(color);
@@ -967,26 +1179,63 @@ public class MainView extends JFrame {
             g.setColor(Color.BLACK);
             g.drawRect(x, y, SIZE - 1, SIZE - 1);
         }
+
+        /**
+         * Returns the icon width.
+         * 
+         * @return the width of the icon
+         */
         @Override
-        public int getIconWidth() { return SIZE; }
+        public int getIconWidth() { 
+            return SIZE; 
+        }
+
+        /**
+         * Returns the icon height.
+         * 
+         * @return the height of the icon
+         */
         @Override
-        public int getIconHeight() { return SIZE; }
+        public int getIconHeight() { 
+            return SIZE; 
+        }
     }
 
     // ======== DIALOG MANAGEMENT =========
+    /**
+     * Displays an error dialog with the specified message.
+     * 
+     * @param message the error message
+     */
     private void showErrorDialog(String message) {
         JOptionPane.showMessageDialog(this, message, "ERROR", JOptionPane.ERROR_MESSAGE);
     }
 
+    /**
+     * Displays a success dialog with the specified message.
+     * 
+     * @param message the success message
+     */
     private void showSuccessDialog(String message) {
         JOptionPane.showMessageDialog(this, message, "SUCCESS", JOptionPane.INFORMATION_MESSAGE);
     }
 
+    /**
+     * Displays an info dialog with the specified message.
+     * 
+     * @param message the info message
+     */
     private void showInfoDialog(String message) {
         JOptionPane.showMessageDialog(this, message, "INFO", JOptionPane.INFORMATION_MESSAGE);
     }
 
     // ======== PANEL MANAGEMENT =========
+    /**
+     * Refreshes the details panel with updated property information.
+     * 
+     * @param detailsPanel the details JPanel to refresh
+     * @param property the Property object
+     */
     private void refreshDetailsPanel(JPanel detailsPanel, Property property) {
         detailsPanel.removeAll();
         detailsPanel.add(createCalendarPanel(property), BorderLayout.CENTER);

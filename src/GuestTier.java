@@ -15,6 +15,11 @@ public enum GuestTier {
 
     private final double discount;
 
+    /**
+     * Constructor to set the discount for the tier.
+     * 
+     * @param discount
+     */
     GuestTier(double discount) {
         this.discount = discount;
     }
@@ -28,6 +33,11 @@ public enum GuestTier {
         return discount;
     }
 
+    /**
+     * Returns a string representation of the guest tier.
+     * 
+     * @return string representation
+     */
     @Override
     public String toString() {
         switch(this) {
